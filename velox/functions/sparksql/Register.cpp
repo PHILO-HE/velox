@@ -126,6 +126,7 @@ void registerFunctions(const std::string& prefix) {
   // broken out into a separate compilation unit to improve build latency.
   registerArithmeticFunctions(prefix);
   registerCompareFunctions(prefix);
+  registerBitwiseFunctions(prefix);
 
   // String sreach function
   registerFunction<StartsWithFunction, bool, Varchar, Varchar>(
