@@ -31,9 +31,9 @@ void registerBitwiseBinaryIntegral(const std::vector<std::string>& aliases) {
 }
 } // namespace
 
-void registerBitwiseFunctions() {
-  registerBitwiseBinaryIntegral<BitwiseAndFunction>({"bitwise_and"});
-  registerBitwiseBinaryIntegral<BitwiseOrFunction>({"bitwise_or"});
+void registerBitwiseFunctions(const std::string& prefix) {
+  registerBitwiseBinaryIntegral<BitwiseAndFunction>({prefix + "bitwise_and"});
+  registerBitwiseBinaryIntegral<BitwiseOrFunction>({prefix + "bitwise_or"});
 }
 
 } // namespace facebook::velox::functions::sparksql
