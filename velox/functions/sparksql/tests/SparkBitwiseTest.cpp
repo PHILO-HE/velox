@@ -16,10 +16,10 @@
 #include <gmock/gmock.h>
 #include <optional>
 
-#include "velox/functions/prestosql/tests/utils/FunctionBaseTest.h"
 #include "velox/functions/sparksql/tests/SparkFunctionBaseTest.h"
 
-namespace facebook::velox {
+namespace facebook::velox::functions::sparksql::test {
+using namespace facebook::velox::test;
 
 namespace {
 
@@ -31,7 +31,7 @@ static constexpr auto kMin64 = std::numeric_limits<int64_t>::min();
 static constexpr auto kMax64 = std::numeric_limits<int64_t>::max();
 static constexpr int kMaxBits = std::numeric_limits<uint64_t>::digits;
 
-class BitwiseTest : public functions::test::FunctionBaseTest {
+class BitwiseTest : public SparkFunctionBaseTest {
 protected:
  template <typename T>
  std::optional<int64_t> bitwiseFunction(
