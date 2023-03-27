@@ -76,6 +76,7 @@ void PageReader::seekToPage(int64_t row) {
 }
 
 PageHeader PageReader::readPageHeader() {
+  std::cout << "###### In readPageHeader\n";
   if (bufferEnd_ == bufferStart_) {
     const void* buffer;
     int32_t size;
