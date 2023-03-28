@@ -27,6 +27,7 @@ endif()
 
 # set the project name
 project(velox)
+add_definitions("-DNDEBUG")
 
 list(PREPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMake")
 
