@@ -543,9 +543,10 @@ std::unique_ptr<Filter> createShortDecimalValues(
   }
   auto min = values.front();
   auto max = values.front();
+  // The comparison operators have been overloaded for UnscaledShortDecimal.
   for (const auto& value : values) {
-    min = std::min(value, min);
-    max = std::max(value, max);
+    min = (value < min) ? value : min;
+    max = (value > max) ? value : max;
   }
   return std::make_unique<ShortDecimalValues>(min, max, values, nullAllowed);
 }
