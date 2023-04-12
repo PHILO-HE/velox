@@ -525,6 +525,31 @@ std::unique_ptr<Filter> createDoubleValues(
   return std::make_unique<DoubleValues>(min, max, values, nullAllowed);
 }
 
+std::unique_ptr<Filter> createShortDecimalValues(
+    const std::vector<UnscaledShortDecimal>& values,
+    bool nullAllowed) {
+  if (values.empty()) {
+    return nullOrFalse(nullAllowed);
+  }
+  if (values.size() == 1) {
+    return std::make_unique<ShortDecimalRange>(
+        values.front(),
+        false,
+        false,
+        values.front(),
+        false,
+        false,
+        nullAllowed);
+  }
+  auto min = values.front();
+  auto max = values.front();
+  for (const auto& value : values) {
+    min = std::min(value, min);
+    max = std::max(value, max);
+  }
+  return std::make_unique<ShortDecimalValues>(min, max, values, nullAllowed);
+}
+
 std::unique_ptr<Filter> createBigintValuesFilter(
     const std::vector<int64_t>& values,
     bool nullAllowed,

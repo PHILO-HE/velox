@@ -56,6 +56,7 @@ enum class FilterKind {
   kNegatedBytesValues,
   kBigintMultiRange,
   kMultiRange,
+  kShortDecimalValue,
   kShortDecimalRange,
   kShortDecimalMultiRange,
 };
@@ -1167,6 +1168,57 @@ class DoubleValues final : public Filter {
   std::vector<bool> bitmask_;
   const double min_;
   const double max_;
+};
+
+class ShortDecimalValues final : public Filter {
+ public:
+  /// @param min Minimum value.
+  /// @param max Maximum value.
+  /// @param values A list of unique values that pass the filter. Must contain
+  /// at least two entries.
+  /// @param nullAllowed Null values are passing the filter if true.
+  ShortDecimalValues(
+      UnscaledShortDecimal min,
+      UnscaledShortDecimal max,
+      const std::vector<UnscaledShortDecimal>& values,
+      bool nullAllowed);
+
+  ShortDeicmalValues(const ShortDecimalValues& other, bool nullAllowed)
+      : Filter(true, nullAllowed, FilterKind::kShortDecimalValues),
+        bitmask_(other.bitmask_),
+        min_(other.min_),
+        max_(other.max_) {}
+
+  std::unique_ptr<Filter> clone(
+      std::optional<bool> nullAllowed = std::nullopt) const final {
+    if (nullAllowed) {
+      return std::make_unique<ShortDecimalValues>(*this, nullAllowed.value());
+    } else {
+      return std::make_unique<ShortDecimalValues>(*this);
+    }
+  }
+
+  std::vector<UnscaledShortDecimal> values() const;
+
+  // TODO: add impl. for short decimal. 
+  bool testDouble(UnscaledShortDecimal value) const final;
+
+  bool testDoubleRange(double min, double max, bool hasNull) const final;
+
+  std::unique_ptr<Filter> mergeWith(const Filter* other) const final;
+
+ private:
+  std::unique_ptr<Filter> mergeWith(double min, double max, const Filter* other)
+      const;
+
+  int64_t toInt64(double value) const {
+    int64_t converted = (int64_t)(value + 0.5);
+    return converted;
+  }
+
+  std::vector<bool> bitmask_;
+  const UnscaledShortDecimal min_;
+  const UnscaledShortDecimal max_;
 };
 
 /// Base class for range filters on floating point and string data types.

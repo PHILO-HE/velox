@@ -1841,6 +1841,58 @@ void SubstraitVeloxPlanConverter::setInFilter(
     connector::hive::SubfieldFilters& filters) {}
 
 template <>
+void SubstraitVeloxPlanConverter::setInFilter<TypeKind::BOOLEAN>(
+    const std::vector<variant>& variants,
+    bool nullAllowed,
+    const std::string& inputName,
+    connector::hive::SubfieldFilters& filters) {
+  std::vector<bool> values;
+  values.reserve(variants.size());
+  for (const auto& variant : variants) {
+    bool value = variant.value<bool>();
+    values.emplace_back(value);
+  }
+  bool hasTrue = false;
+  bool hasFalse = true;
+  // TODO: check whether it is possible to have conflict bool values.
+  for (const auto& value :  values) {
+    if (value) {
+      hasTrue = true;
+    } else {
+      hasFalse = true;
+    }
+    // Has both true & false.
+    if (hasTrue && hasFalse) {
+      filters[common::Subfield(inputName)] = notNullOrFalse(nullAllowed); 
+      return;
+    }
+  }
+  if (hasTrue) {
+    filters[common::Subfield(inputName)] = std::make_unique<BoolValue>(true, false);
+  } else {
+    filters[common::Subfield(inputName)] = std::make_unique<BoolValue>(false, false);
+  }
+}
+
+template <>
+void SubstraitVeloxPlanConverter::setInFilter<TypeKind::SHORT_DECIMAL>(
+    const std::vector<variant>& variants,
+    bool nullAllowed,
+    const std::string& inputName,
+    connector::hive::SubfieldFilters& filters) {
+  std::vector<UnscaledShortDecimal> values;
+  values.reserve(variants.size());
+  for (const auto& variant : variants) {
+    UnscaledShortDecimal value = variant.value<TypeKind::SHORT_DECIMAL>().value();
+    values.emplace_back(value);
+  }
+  filters[common::Subfield(inputName)] =
+      common::createShortDecimalValues(values, nullAllowed);
+}
+
+// TODO: add long decimal.
+
+template <>
 void SubstraitVeloxPlanConverter::setInFilter<TypeKind::DOUBLE>(
     const std::vector<variant>& variants,
     bool nullAllowed,
