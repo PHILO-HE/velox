@@ -227,7 +227,7 @@ struct LikeFunction {
     result = true;
   }
 
-  FOLLY_ALWAYS_INLINE void call(bool& result, const arg_type<Varchar>& input, const arg_type<Varchar>& pattern) {
+  FOLLY_ALWAYS_INLINE void call(bool& result, const arg_type<Varchar>& input, const arg_type<Varchar>& pattern, const arg_type<Varchar>& escapeChar) {
      doCompute(result, input, pattern, std::nullopt);
   }
 
