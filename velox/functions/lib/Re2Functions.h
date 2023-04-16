@@ -26,6 +26,15 @@
 
 namespace facebook::velox::functions {
 
+// std::string likePatternToRe2(
+//     StringView pattern,
+//     std::optional<char> escapeChar,
+//     bool& validPattern);
+
+// template <typename T>
+// re2::StringPiece toStringPiece(const T& s);
+
+
 /// Representation of different kinds of patterns.
 enum class PatternKind {
   /// Pattern containing wildcard character '_' only, such as _, __, ____.
@@ -195,6 +204,37 @@ struct Re2RegexpReplace {
 
     return true;
   }
+};
+
+template <typename T>
+struct LikeFunction {
+  VELOX_DEFINE_FUNCTION_TYPES(T);
+
+  FOLLY_ALWAYS_INLINE void doCompute(bool& result, const arg_type<Varchar>& input, const arg_type<Varchar>& pattern,
+   const std::optional<char> escapeChar = std::nullopt) {
+    // RE2::Options opt{RE2::Quiet};
+    //  std::optional<RE2> re;
+    //  bool validPattern;
+    //  re.emplace(
+    //     toStringPiece(likePatternToRe2(pattern, escapeChar, validPattern)),
+    //     opt);
+    //   if (!validPattern) {
+    //     return;
+    //   }
+    //   result = RE2::FullMatch(toStringPiece(input), *re);
+
+    //fake code
+    result = true;
+  }
+
+  FOLLY_ALWAYS_INLINE void call(bool& result, const arg_type<Varchar>& input, const arg_type<Varchar>& pattern) {
+     doCompute(result, input, pattern, std::nullopt);
+  }
+
+//   FOLLY_ALWAYS_INLINE void call(bool& result, const arg_type<Varchar>& input, const arg_type<Varchar>& pattern,
+//                                 const arg_type<Varchar>& escapeChar) {
+//       doCompute(result, input, pattern, std::optional<Varchar>{escapeChar});
+//   }
 };
 
 } // namespace facebook::velox::functions

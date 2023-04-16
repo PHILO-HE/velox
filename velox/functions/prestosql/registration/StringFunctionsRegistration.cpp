@@ -89,6 +89,9 @@ void registerSimpleFunctions(const std::string& prefix) {
       {prefix + "to_base64url"});
   exec::registerStatefulVectorFunction(
       prefix + "like", likeSignatures(), makeLike);
+  // For non-constant pattern.
+  registerFunction<LikeFunction, bool, Varchar/*input*/, Varchar/*pattern*/>({prefix + "like"});
+//   registerFunction<LikeFunction, bool, Varchar/*input*/, Varchar/*pattern*/, Varchar/*escapeChar*/>({prefix + "like"});
 
   registerFunction<SplitPart, Varchar, Varchar, Varchar, int64_t>(
       {prefix + "split_part"});
