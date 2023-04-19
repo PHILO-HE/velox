@@ -150,6 +150,10 @@ class Filter {
     VELOX_UNSUPPORTED("{}: testFloat() is not supported.", toString());
   }
 
+  bool testShortDecimal(UnscaledShortDecimal value) const {
+    VELOX_UNSUPPORTED("{}: testShortDecimal() is not supported.", toString());
+  }
+
   virtual xsimd::batch_bool<int64_t> testValues(xsimd::batch<int64_t> x) const {
     return genericTestValues(x, [this](int64_t x) { return testInt64(x); });
   }
@@ -219,6 +223,11 @@ class Filter {
       const {
     VELOX_UNSUPPORTED("{}: testDoubleRange() is not supported.", toString());
   }
+
+  virtual bool testShortDecimalRange(UnscaledShortDecimal min, UnscaledShortDecimal max, bool hasNull) const {
+    VELOX_UNSUPPORTED("{}: testShortDecimalRange() is not supported.", toString());
+  }
+
 
   virtual bool testBytesRange(
       std::optional<std::string_view> /*min*/,
@@ -1184,7 +1193,7 @@ class ShortDecimalValues final : public Filter {
       bool nullAllowed);
 
   ShortDeicmalValues(const ShortDecimalValues& other, bool nullAllowed)
-      : Filter(true, nullAllowed, FilterKind::kShortDecimalValues),
+      : Filter(true, nullAllowed, FilterKind::kShortDecimalValue),
         bitmask_(other.bitmask_),
         min_(other.min_),
         max_(other.max_) {}
@@ -1201,9 +1210,9 @@ class ShortDecimalValues final : public Filter {
   std::vector<UnscaledShortDecimal> values() const;
 
   // TODO: add impl. for short decimal. 
-  bool testDouble(UnscaledShortDecimal value) const final;
+  bool testShortDecimal(UnscaledShortDecimal value) const final;
 
-  bool testDoubleRange(double min, double max, bool hasNull) const final;
+  bool testShortDecimalRange(UnscaledShortDecimal min, UnscaledShortDecimal max, bool hasNull) const final;
 
   std::unique_ptr<Filter> mergeWith(const Filter* other) const final;
 

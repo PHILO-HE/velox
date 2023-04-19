@@ -314,6 +314,30 @@ DoubleValues::mergeWith(double min, double max, const Filter* other) const {
   return createDoubleValues(valuesToKeep, bothNullAllowed);
 }
 
+  bool testShortDecimal(UnscaledShortDecimal value) const {
+    if (value < min_ || value > max_) {
+      return false;
+    }
+    // TODO: use bitmask_.
+    return true;
+  }
+
+  bool testShortDecimalRange(UnscaledShortDecimal min, UnscaledShortDecimal max, bool hasNull) const {
+    if (hasNull && nullAllowed_) {
+      return true;
+    }
+
+    if (min == max) {
+      return testShortDecimal(min);
+    }
+
+    return !(min > max_ || max < min_);
+  }
+
+  std::unique_ptr<Filter> mergeWith(const Filter* other) const {
+
+  }
+
 xsimd::batch_bool<int64_t> BigintValuesUsingHashTable::testValues(
     xsimd::batch<int64_t> x) const {
   auto outOfRange = (x < xsimd::broadcast<int64_t>(min_)) |
