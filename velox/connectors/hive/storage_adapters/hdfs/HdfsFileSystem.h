@@ -80,8 +80,8 @@ class HdfsFileSystem : public FileSystem {
   }
 
   static bool isHdfsFile(std::string_view filename);
-  static HdfsServiceEndpoint getServiceEndpoint(const Config* config);
-  static HdfsServiceEndpoint getServiceEndpoint(
+  static std::shared_ptr<HdfsServiceEndpoint> getServiceEndpoint(const Config* config);
+  static std::shared_ptr<HdfsServiceEndpoint> getServiceEndpoint(const Config* config,
       const std::string_view filePath);
 
  protected:

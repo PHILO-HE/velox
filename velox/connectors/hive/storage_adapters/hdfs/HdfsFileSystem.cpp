@@ -30,9 +30,12 @@ class HdfsFileSystem::Impl {
  public:
   explicit Impl(const Config* config) {
     auto endpointInfo = getServiceEndpoint(config);
+    VELOX_CHECK_NOT_NULL(
+        endpointInfo,
+        "Endpoint is not specified in config!")
     auto builder = hdfsNewBuilder();
-    hdfsBuilderSetNameNode(builder, endpointInfo.host.c_str());
-    hdfsBuilderSetNameNodePort(builder, endpointInfo.port);
+    hdfsBuilderSetNameNode(builder, endpointInfo->host.c_str());
+    hdfsBuilderSetNameNodePort(builder, endpointInfo->port);
     hdfsClient_ = hdfsBuilderConnect(builder);
     VELOX_CHECK_NOT_NULL(
         hdfsClient_,
@@ -40,6 +43,7 @@ class HdfsFileSystem::Impl {
         hdfsGetLastError())
   }
 
+  // Keep config here for possible client initialization use.
   explicit Impl(const Config* config, const HdfsServiceEndpoint& endpoint) {
     auto builder = hdfsNewBuilder();
     hdfsBuilderSetNameNode(builder, endpoint.host.c_str());
@@ -112,25 +116,42 @@ bool HdfsFileSystem::isHdfsFile(const std::string_view filePath) {
  * Get hdfs endpoint from config. This is applicable to the case that only one
  * hdfs endpoint will be used.
  */
-HdfsServiceEndpoint HdfsFileSystem::getServiceEndpoint(const Config* config) {
+std::shared_ptr<HdfsServiceEndpoint> HdfsFileSystem::getServiceEndpoint(const Config* config) {
+  if (!config) {
+    return nullptr;
+  }
   auto hdfsHost = config->get("hive.hdfs.host");
-  VELOX_CHECK(
-      hdfsHost.hasValue(),
-      "hdfsHost is empty, configuration missing for hdfs host");
+  // VELOX_CHECK(
+  //     hdfsHost.hasValue(),
+  //     "hdfsHost is empty, configuration missing for hdfs host");
+  if (!hdfsHost.hasValue()) {
+    return nullptr;
+  }
   auto hdfsPort = config->get("hive.hdfs.port");
-  VELOX_CHECK(
-      hdfsPort.hasValue(),
-      "hdfsPort is empty, configuration missing for hdfs port");
-  HdfsServiceEndpoint endpoint{*hdfsHost, *hdfsPort};
-  return endpoint;
+  // VELOX_CHECK(
+  //     hdfsPort.hasValue(),
+  //     "hdfsPort is empty, configuration missing for hdfs port");
+  if (!hdfsPort.hasValue()) {
+    return nullptr;
+  }
+  // HdfsServiceEndpoint endpoint{*hdfsHost, *hdfsPort};
+  return std::make_shared<HdfsServiceEndpoint>(*hdfsHost, *hdfsPort);
+  //return endpoint;
 }
 
 /**
- * Get hdfs endpoint from a given file path, instead of getting a fixed one from
- * configuration.
+ * Get hdfs endpoint according to config or extracted from a given file path. The config path
+ * overrides the second extraction path.
  */
-HdfsServiceEndpoint HdfsFileSystem::getServiceEndpoint(
+std::shared_ptr<HdfsServiceEndpoint> HdfsFileSystem::getServiceEndpoint(const Config* properties,
     const std::string_view filePath) {
+  if (!properties) {
+    auto endpointFromConfig = getServiceEndpoint(properties);
+    if (endpointFromConfig) {
+      return endpointFromConfig;
+    }
+  }
+
   auto index1 = filePath.find('/', kScheme.size() + 1);
   std::string hdfsIdentity{
       filePath.data(), kScheme.size(), index1 - kScheme.size()};
@@ -140,14 +161,14 @@ HdfsServiceEndpoint HdfsFileSystem::getServiceEndpoint(
   auto index2 = hdfsIdentity.find(':', 0);
   // In HDFS HA mode, the hdfsIdentity is a nameservice ID with no port.
   if (index2 == std::string::npos) {
-    HdfsServiceEndpoint endpoint{hdfsIdentity, ""};
-    return endpoint;
+    // HdfsServiceEndpoint endpoint{hdfsIdentity, ""};
+    return std::make_shared<HdfsServiceEndpoint>(hdfsIdentity, "");
   }
   std::string host{hdfsIdentity.data(), 0, index2};
   std::string port{
       hdfsIdentity.data(), index2 + 1, hdfsIdentity.size() - index2 - 1};
-  HdfsServiceEndpoint endpoint{host, port};
-  return endpoint;
+  // HdfsServiceEndpoint endpoint{host, port};
+  return std::make_shared<HdfsServiceEndpoint>(host,port);
 }
 
 static std::function<std::shared_ptr<FileSystem>(
@@ -160,8 +181,8 @@ static std::function<std::shared_ptr<FileSystem>(
       static folly::
           ConcurrentHashMap<std::string, std::shared_ptr<folly::once_flag>>
               hdfsInitiationFlags;
-      auto endpoint = HdfsFileSystem::getServiceEndpoint(filePath);
-      std::string hdfsIdentity = endpoint.identity;
+      auto endpoint = HdfsFileSystem::getServiceEndpoint(properties.get(), filePath);
+      std::string hdfsIdentity = endpoint->identity;
       if (filesystems.find(hdfsIdentity) != filesystems.end()) {
         return filesystems[hdfsIdentity];
       }
@@ -180,7 +201,7 @@ static std::function<std::shared_ptr<FileSystem>(
           *hdfsInitiationFlags[hdfsIdentity].get(),
           [&properties, endpoint, hdfsIdentity]() {
             auto filesystem =
-                std::make_shared<HdfsFileSystem>(properties, endpoint);
+                std::make_shared<HdfsFileSystem>(properties, *endpoint.get());
             filesystems.insert(hdfsIdentity, filesystem);
           });
       return filesystems[hdfsIdentity];
