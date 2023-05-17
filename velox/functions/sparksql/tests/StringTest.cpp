@@ -140,6 +140,13 @@ class StringTest : public SparkFunctionBaseTest {
     return evaluateOnce<std::string>(
         "substring(c0, c1, c2)", str, start, length);
   }
+
+  std::optional<std::string> conv(
+      std::optional<std::string> str,
+      std::optional<int32_t> fromBase,
+      std::optional<int32_t> toBase) {
+    return evaluateOnce<std::string>("conv(c0, c1, c2)", str, fromBase, toBase);
+  }
 };
 
 TEST_F(StringTest, Ascii) {
@@ -444,6 +451,21 @@ TEST_F(StringTest, substring) {
   EXPECT_EQ(substring("example", -2147483647), "example");
   EXPECT_EQ(substring("da\u6570\u636Eta", 3), "\u6570\u636Eta");
   EXPECT_EQ(substring("da\u6570\u636Eta", -3), "\u636Eta");
+}
+
+TEST_F(StringTest, conv) {
+  EXPECT_EQ(conv("4", 10, 2), "100");
+  EXPECT_EQ(conv("110", 2, 10), "6");
+  EXPECT_EQ(conv("15", 10, 16), "F");
+  EXPECT_EQ(conv("big", 36, 16), "3A48");
+  EXPECT_EQ(conv("9223372036854775807", 36, 16), "FFFFFFFFFFFFFFFF");
+  // Space is contained.
+  EXPECT_EQ(conv(" 15 ", 10, 16), "F");
+  EXPECT_EQ(conv("-15", 10, -16), "-F");
+  EXPECT_EQ(conv("-15", 10, 16), "FFFFFFFFFFFFFFF1");
+  EXPECT_EQ(conv("-10", 16, -10), "-16");
+  EXPECT_EQ(conv("11abc", 10, 16), "B");
+  EXPECT_EQ(conv("", 10, 16), std::nullopt);
 }
 
 } // namespace
