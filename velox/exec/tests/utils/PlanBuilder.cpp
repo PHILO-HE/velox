@@ -86,7 +86,8 @@ PlanBuilder& PlanBuilder::tableScan(
     const std::unordered_map<std::string, std::string>& columnAliases,
     const std::vector<std::string>& subfieldFilters,
     const std::string& remainingFilter,
-    const RowTypePtr& dataColumns) {
+    const RowTypePtr& dataColumns,
+    bool isFilterPushdownEnabled) {
   std::unordered_map<std::string, std::shared_ptr<connector::ColumnHandle>>
       assignments;
   std::unordered_map<std::string, core::TypedExprPtr> typedMapping;
@@ -146,7 +147,7 @@ PlanBuilder& PlanBuilder::tableScan(
   auto tableHandle = std::make_shared<HiveTableHandle>(
       kHiveConnectorId,
       tableName,
-      true,
+      isFilterPushdownEnabled,
       std::move(filters),
       remainingFilterExpr,
       dataColumns);
