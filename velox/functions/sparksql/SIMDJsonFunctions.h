@@ -16,6 +16,8 @@
 
 #include "velox/functions/prestosql/SIMDJsonFunctions.h"
 
+using namespace simdjson;
+
 namespace facebook::velox::functions {
 
 template <typename T>
@@ -25,8 +27,9 @@ struct SIMDGetJsonObjectFunction {
   // ASCII input always produces ASCII result.
   static constexpr bool is_default_ascii_behavior = true;
 
-  FOLLY_ALWAYS_INLINE error_code
-  handleFieldTypes(simdjson_result<ondemand::value> rawRes, std::string* res) {
+  FOLLY_ALWAYS_INLINE simdjson::error_code handleFieldTypes(
+      simdjson_result<simdjson::fallback::ondemand::value> rawRes,
+      std::string* res) {
     switch (rawRes.type()) {
       case ondemand::json_type::number: {
         std::stringstream ss;
@@ -35,7 +38,7 @@ struct SIMDGetJsonObjectFunction {
             uint64_t numRes;
             auto error = rawRes.get_uint64().get(numRes);
             if (!error) {
-              ss << num_res;
+              ss << numRes;
               *res = ss.str();
             }
             return error;
@@ -68,13 +71,13 @@ struct SIMDGetJsonObjectFunction {
       }
       case ondemand::json_type::boolean: {
         bool boolRes = false;
-        raw_res.get_bool().get(boolRes);
+        rawRes.get_bool().get(boolRes);
         if (boolRes) {
           *res = "true";
         } else {
           *res = "false";
         }
-        return error_code::SUCCESS;
+        return simdjson::SUCCESS;
       }
       case ondemand::json_type::object: {
         // For nested case, e.g., for "{"my": {"hello": 10}}", "$.my" will
@@ -84,7 +87,7 @@ struct SIMDGetJsonObjectFunction {
         std::stringstream ss;
         ss << obj;
         *res = ss.str();
-        return error_code::SUCCESS;
+        return simdjson::SUCCESS;
       }
       case ondemand::json_type::array: {
         auto arrayObj = rawRes.get_array();
@@ -92,17 +95,42 @@ struct SIMDGetJsonObjectFunction {
         std::stringstream ss;
         ss << arrayObj;
         *res = ss.str();
-        return error_code::SUCCESS;
+        return simdjson::SUCCESS;
       }
       case ondemand::json_type::null: {
-        return error_code::UNSUPPORTED_ARCHITECTURE;
+        return simdjson::UNSUPPORTED_ARCHITECTURE;
       }
+    }
+  }
+
+  // This is simple validation by checking whether the obtained result is
+  // followed by expected char. It is useful in ondemand kind of parsing which
+  // can ignore the validation of character following closing '"'. This functon
+  // is a simple checking. For many cases, even though it returns true, the raw
+  // json string can still be illegal possibly.
+  FOLLY_ALWAYS_INLINE bool isValidEnding(
+      const char* current_position,
+      int check_index) {
+    char ending_char = current_position[check_index];
+    if (ending_char == ',') {
+      return true;
+    } else if (ending_char == '}') {
+      return true;
+    } else if (ending_char == ']') {
+      return true;
+    } else if (
+        ending_char == ' ' || ending_char == '\r' || ending_char == '\n' ||
+        ending_char == '\t') {
+      // space, '\r', '\n' or '\t' can precede valid ending char.
+      return isValidEnding(current_position, check_index + 1);
+    } else {
+      return false;
     }
   }
 
   FOLLY_ALWAYS_INLINE bool call(
       out_type<Varchar>& result,
-      const arg_type<Json>& json,
+      const arg_type<Varchar>& json,
       const arg_type<Varchar>& jsonPath) {
     ParserContext ctx(json.data(), json.size());
     try {
@@ -114,34 +142,50 @@ struct SIMDGetJsonObjectFunction {
     // Makes a conversion from spark's json path, e.g., "$.a.b".
     char formattedJsonPath[jsonPath.size() + 1];
     int j = 0;
-    for (int i = 0; i < jsonPath.length(); i++) {
-      if (jsonPath[i] == '$' || jsonPath[i] == ']' || jsonPath[i] == '\'') {
+    for (int i = 0; i < jsonPath.size(); i++) {
+      if (jsonPath.data()[i] == '$' || jsonPath.data()[i] == ']' ||
+          jsonPath.data()[i] == '\'') {
         continue;
-      } else if (jsonPath[i] == '[' || jsonPath[i] == '.') {
+      } else if (jsonPath.data()[i] == '[' || jsonPath.data()[i] == '.') {
         formattedJsonPath[j] = '/';
         j++;
       } else {
-        formattedJsonPath[j] = jsonPath[i];
+        formattedJsonPath[j] = jsonPath.data()[i];
         j++;
       }
     }
     formattedJsonPath[j] = '\0';
 
-    auto rawRes = jsonDoc.at_pointer(formattedJsonPath);
+    simdjson_result<simdjson::fallback::ondemand::value> rawRes;
+    try {
+      rawRes = ctx.jsonDoc.at_pointer(formattedJsonPath);
+    } catch (...) {
+      return false;
+    }
     // Field not found.
-    if (rawRes.error() == error_code::NO_SUCH_FIELD) {
+    if (rawRes.error() == NO_SUCH_FIELD) {
       return false;
     }
     std::string res;
-    error = handleFieldTypes(raw_res, &res);
-    if (error) {
+    try {
+      auto error = handleFieldTypes(rawRes, &res);
+      if (error) {
+        return false;
+      }
+    } catch (...) {
+      return false;
+    }
+
+    const char* current_location;
+    ctx.jsonDoc.current_location().get(current_location);
+    if (!isValidEnding(current_location, 0)) {
       return false;
     }
 
     result.resize(res.length());
-    *result.data() = res.data();
+    std::memcpy(result.data(), res.data(), res.length());
     return true;
   }
-}
+};
 
 } // namespace facebook::velox::functions
