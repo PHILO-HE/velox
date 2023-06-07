@@ -23,9 +23,40 @@ namespace facebook::velox::functions {
 template <typename T>
 struct SIMDGetJsonObjectFunction {
   VELOX_DEFINE_FUNCTION_TYPES(T);
+  std::optional<std::string> formattedJsonPath_;
 
   // ASCII input always produces ASCII result.
   static constexpr bool is_default_ascii_behavior = true;
+
+  FOLLY_ALWAYS_INLINE std::string prepareJsonPath(
+      const arg_type<Varchar>& jsonPath) {
+    // Makes a conversion from spark's json path, e.g., "$.a.b".
+    char formattedJsonPath[jsonPath.size() + 1];
+    int j = 0;
+    for (int i = 0; i < jsonPath.size(); i++) {
+      if (jsonPath.data()[i] == '$' || jsonPath.data()[i] == ']' ||
+          jsonPath.data()[i] == '\'') {
+        continue;
+      } else if (jsonPath.data()[i] == '[' || jsonPath.data()[i] == '.') {
+        formattedJsonPath[j] = '/';
+        j++;
+      } else {
+        formattedJsonPath[j] = jsonPath.data()[i];
+        j++;
+      }
+    }
+    formattedJsonPath[j] = '\0';
+    return std::string(formattedJsonPath, j + 1);
+  }
+
+  FOLLY_ALWAYS_INLINE void initialize(
+      const core::QueryConfig& config,
+      const arg_type<Varchar>* /*json*/,
+      const arg_type<Varchar>* jsonPath) {
+    if (jsonPath != nullptr) {
+      formattedJsonPath_ = prepareJsonPath(*jsonPath);
+    }
+  }
 
   FOLLY_ALWAYS_INLINE simdjson::error_code handleFieldTypes(
       simdjson_result<simdjson::fallback::ondemand::value> rawRes,
@@ -108,9 +139,7 @@ struct SIMDGetJsonObjectFunction {
   // can ignore the validation of character following closing '"'. This functon
   // is a simple checking. For many cases, even though it returns true, the raw
   // json string can still be illegal possibly.
-  FOLLY_ALWAYS_INLINE bool isValidEnding(
-      const char* current_position,
-      int check_index) {
+  bool isValidEnding(const char* current_position, int check_index) {
     char ending_char = current_position[check_index];
     if (ending_char == ',') {
       return true;
@@ -139,27 +168,14 @@ struct SIMDGetJsonObjectFunction {
       return false;
     }
 
-    // Makes a conversion from spark's json path, e.g., "$.a.b".
-    char formattedJsonPath[jsonPath.size() + 1];
-    int j = 0;
-    for (int i = 0; i < jsonPath.size(); i++) {
-      if (jsonPath.data()[i] == '$' || jsonPath.data()[i] == ']' ||
-          jsonPath.data()[i] == '\'') {
-        continue;
-      } else if (jsonPath.data()[i] == '[' || jsonPath.data()[i] == '.') {
-        formattedJsonPath[j] = '/';
-        j++;
-      } else {
-        formattedJsonPath[j] = jsonPath.data()[i];
-        j++;
-      }
-    }
-    formattedJsonPath[j] = '\0';
-
     simdjson_result<simdjson::fallback::ondemand::value> rawRes;
     try {
-      rawRes = ctx.jsonDoc.at_pointer(formattedJsonPath);
-    } catch (...) {
+      if (formattedJsonPath_.has_value()) {
+        rawRes = ctx.jsonDoc.at_pointer(formattedJsonPath_.value().data());
+      } else {
+        rawRes = ctx.jsonDoc.at_pointer(prepareJsonPath(jsonPath).data());
+      }
+    } catch (simdjson_error& e) {
       return false;
     }
     // Field not found.
@@ -172,7 +188,7 @@ struct SIMDGetJsonObjectFunction {
       if (error) {
         return false;
       }
-    } catch (...) {
+    } catch (simdjson_error& e) {
       return false;
     }
 
