@@ -119,8 +119,7 @@ void WindowTestBase::testWindowFunction(
   }
 }
 
-void WindowTestBase::testKRangeFrames(
-    const std::string& function) {
+void WindowTestBase::testKRangeFrames(const std::string& function) {
   // The current support for k Range frames is limited to ascending sort
   // orders without null values. Frames clauses generating empty frames
   // are also not supported.
@@ -153,7 +152,6 @@ void WindowTestBase::testKRangeFrames(
   };
 
   testWindowFunction({vectors}, function, {overClause}, kRangeFrames);
-
 }
 
 void WindowTestBase::assertWindowFunctionError(
