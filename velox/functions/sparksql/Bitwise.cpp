@@ -20,7 +20,7 @@ namespace facebook::velox::functions::sparksql {
 template <typename T>
 struct BitwiseAndFunction {
   template <typename TInput>
-  FOLLY_ALWAYS_INLINE void call(TInput& result, TInput a, TInput b) {
+  FOLLY_ALWAYS_INLINE void call(TInput& result, TInput& a, TInput& b) {
     result = a & b;
   }
 };
@@ -28,7 +28,7 @@ struct BitwiseAndFunction {
 template <typename T>
 struct BitwiseOrFunction {
   template <typename TInput>
-  FOLLY_ALWAYS_INLINE void call(TInput& result, TInput a, TInput b) {
+  FOLLY_ALWAYS_INLINE void call(TInput& result, TInput& a, TInput& b) {
     result = a | b;
   }
 };
@@ -36,7 +36,7 @@ struct BitwiseOrFunction {
 template <typename T>
 struct ShiftLeftFunction {
   template <typename TInput1, typename TInput2>
-  FOLLY_ALWAYS_INLINE void call(TInput1& result, TInput1 a, TInput2 b) {
+  FOLLY_ALWAYS_INLINE void call(TInput1& result, TInput1& a, TInput2& b) {
     if constexpr (std::is_same_v<TInput1, int32_t>) {
       if (b < 0) {
         b = b % 32 + 32;
@@ -60,7 +60,7 @@ struct ShiftLeftFunction {
 template <typename T>
 struct ShiftRightFunction {
   template <typename TInput1, typename TInput2>
-  FOLLY_ALWAYS_INLINE void call(TInput1& result, TInput1 a, TInput2 b) {
+  FOLLY_ALWAYS_INLINE void call(TInput1& result, TInput1& a, TInput2& b) {
     if constexpr (std::is_same_v<TInput1, int32_t>) {
       if (b < 0) {
         b = b % 32 + 32;
