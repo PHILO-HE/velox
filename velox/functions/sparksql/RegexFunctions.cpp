@@ -82,4 +82,11 @@ std::shared_ptr<exec::VectorFunction> makeRegexExtract(
   return result;
 }
 
+std::shared_ptr<exec::VectorFunction> makeRegexpReplace(
+  const std::string& name,
+  const std::vector<exec::VectorFunctionArg>& inputArgs,
+  const core::QueryConfig& config) {
+    auto result = make
+  }
+
 } // namespace facebook::velox::functions::sparksql
