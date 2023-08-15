@@ -73,7 +73,9 @@ static void workAroundRegistrationMacro(const std::string& prefix) {
 namespace sparksql {
 
 void registerFunctions(const std::string& prefix) {
-  registerFunction<RandFunction, double>({prefix + "rand"});
+  registerFunction<RandFunction, double>({prefix + "rand", prefix + "random"});
+  registerFunction<RandFunction, double, int64_t>(
+      {prefix + "rand", prefix + "random"});
 
   // Register size functions
   registerSize(prefix + "size");
