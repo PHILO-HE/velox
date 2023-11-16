@@ -59,7 +59,7 @@ struct SIMDGetJsonObjectFunction {
   }
 
   FOLLY_ALWAYS_INLINE simdjson::error_code handleFieldTypes(
-      simdjson_result<simdjson::fallback::ondemand::value> rawRes,
+      simdjson_result<simdjson::ondemand::value> rawRes,
       std::string* res) {
     switch (rawRes.type()) {
       case ondemand::json_type::number: {
@@ -168,7 +168,7 @@ struct SIMDGetJsonObjectFunction {
       return false;
     }
 
-    simdjson_result<simdjson::fallback::ondemand::value> rawRes;
+    simdjson_result<simdjson::ondemand::value> rawRes;
     try {
       if (formattedJsonPath_.has_value()) {
         rawRes = ctx.jsonDoc.at_pointer(formattedJsonPath_.value().data());
