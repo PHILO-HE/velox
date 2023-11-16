@@ -30,6 +30,7 @@ add_executable(
   ElementAtTest.cpp
   HashTest.cpp
   InTest.cpp
+  JsonTest.cpp
   LeastGreatestTest.cpp
   MapTest.cpp
   MightContainTest.cpp

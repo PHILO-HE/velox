@@ -36,6 +36,7 @@
 #include "velox/functions/sparksql/RegexFunctions.h"
 #include "velox/functions/sparksql/RegisterArithmetic.h"
 #include "velox/functions/sparksql/RegisterCompare.h"
+#include "velox/functions/sparksql/SIMDJsonFunctions.h"
 #include "velox/functions/sparksql/Size.h"
 #include "velox/functions/sparksql/String.h"
 #include "velox/functions/sparksql/specialforms/DecimalRound.h"
@@ -134,7 +135,7 @@ void registerFunctions(const std::string& prefix) {
   // Register size functions
   registerSize(prefix + "size");
 
-  registerFunction<JsonExtractScalarFunction, Varchar, Varchar, Varchar>(
+  registerFunction<SIMDGetJsonObjectFunction, Varchar, Varchar, Varchar>(
       {prefix + "get_json_object"});
 
   // Register string functions.
