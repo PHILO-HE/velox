@@ -16,7 +16,7 @@
 
 #include "velox/common/base/Exceptions.h"
 #include "velox/exec/WindowFunction.h"
-
+#include <iostream>
 namespace facebook::velox::window::prestosql {
 
 namespace {
@@ -30,15 +30,18 @@ class LeadLagFunction : public exec::WindowFunction {
       bool ignoreNulls,
       velox::memory::MemoryPool* pool)
       : WindowFunction(resultType, pool, nullptr), ignoreNulls_(ignoreNulls) {
+    std::cout << "$$$$$ 00\n";
     valueIndex_ = args[0].index.value();
 
     initializeOffset(args);
     initializeDefaultValue(args);
 
     nulls_ = allocateNulls(0, pool);
+    std::cout << "$$$$$ 01\n";
   }
 
   void resetPartition(const exec::WindowPartition* partition) override {
+    std::cout << "$$$$$ 02\n";
     partition_ = partition;
     partitionOffset_ = 0;
     ignoreNullsForPartition_ = false;
@@ -53,6 +56,7 @@ class LeadLagFunction : public exec::WindowFunction {
       ignoreNullsForPartition_ =
           bits::countBits(nulls_->as<uint64_t>(), 0, partitionSize) > 0;
     }
+    std::cout << "$$$$$ 03\n";
   }
 
   void apply(
@@ -63,6 +67,7 @@ class LeadLagFunction : public exec::WindowFunction {
       const SelectivityVector& /*validRows*/,
       int32_t resultOffset,
       const VectorPtr& result) override {
+    std::cout << "$$$$$ 04\n";
     const auto numRows = frameStarts->size() / sizeof(vector_size_t);
 
     rowNumbers_.resize(numRows);
@@ -84,6 +89,7 @@ class LeadLagFunction : public exec::WindowFunction {
     setDefaultValue(result, resultOffset);
 
     partitionOffset_ += numRows;
+    std::cout << "$$$$$ 05\n";
   }
 
  private:
@@ -97,6 +103,7 @@ class LeadLagFunction : public exec::WindowFunction {
   static constexpr vector_size_t kDefaultValueRow = -2;
 
   void initializeOffset(const std::vector<exec::WindowFunctionArg>& args) {
+    std::cout << "$$$$$ 06\n";
     if (args.size() == 1) {
       constantOffset_ = 1;
       return;
@@ -116,10 +123,12 @@ class LeadLagFunction : public exec::WindowFunction {
       offsetIndex_ = offsetArg.index.value();
       offsets_ = BaseVector::create<FlatVector<int64_t>>(BIGINT(), 0, pool());
     }
+    std::cout << "$$$$$ 07\n";
   }
 
   void initializeDefaultValue(
       const std::vector<exec::WindowFunctionArg>& args) {
+    std::cout << "$$$$$ 08\n";
     if (args.size() <= 2) {
       return;
     }
@@ -134,6 +143,7 @@ class LeadLagFunction : public exec::WindowFunction {
       defaultValueIndex_ = defaultValueArg.index.value();
       defaultValues_ = BaseVector::create(defaultValueArg.type, 0, pool());
     }
+        std::cout << "$$$$$ 09\n";
   }
 
   void setRowNumbersForConstantOffset(vector_size_t offset);

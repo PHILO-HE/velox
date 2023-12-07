@@ -18,6 +18,7 @@
 #include "velox/exec/SortWindowBuild.h"
 #include "velox/exec/StreamingWindowBuild.h"
 #include "velox/exec/Task.h"
+#include <iostream>
 
 namespace facebook::velox::exec {
 
@@ -38,6 +39,7 @@ Window::Window(
       windowNode_(windowNode),
       currentPartition_(nullptr),
       stringAllocator_(pool()) {
+  std::cout << "%%%% 00\n";
   auto* spillConfig =
       spillConfig_.has_value() ? &spillConfig_.value() : nullptr;
   if (windowNode->inputsSorted()) {
@@ -47,6 +49,7 @@ Window::Window(
     windowBuild_ = std::make_unique<SortWindowBuild>(
         windowNode, pool(), spillConfig, &nonReclaimableSection_);
   }
+  std::cout << "%%%% 01\n";
 }
 
 void Window::initialize() {
@@ -60,6 +63,7 @@ void Window::initialize() {
 Window::WindowFrame Window::createWindowFrame(
     core::WindowNode::Frame frame,
     const RowTypePtr& inputType) {
+    std::cout << "%%%% 02\n";
   if (frame.type == core::WindowNode::WindowType::kRows) {
     auto frameBoundCheck = [&](const core::TypedExprPtr& frame) -> void {
       if (frame == nullptr) {
@@ -72,10 +76,12 @@ Window::WindowFrame Window::createWindowFrame(
     };
     frameBoundCheck(frame.startValue);
     frameBoundCheck(frame.endValue);
+    std::cout << "%%%% 03\n";
   }
 
   auto createFrameChannelArg =
       [&](const core::TypedExprPtr& frame) -> std::optional<FrameChannelArg> {
+      std::cout << "%%%% 04\n";
     // frame is nullptr for non (kPreceding or kFollowing) frames.
     if (frame == nullptr) {
       return std::nullopt;
@@ -98,6 +104,7 @@ Window::WindowFrame Window::createWindowFrame(
           BaseVector::create(frame->type(), 0, pool()),
           std::nullopt});
     }
+      std::cout << "%%%% 05\n";
   };
 
   return WindowFrame(
@@ -109,6 +116,7 @@ Window::WindowFrame Window::createWindowFrame(
 }
 
 void Window::createWindowFunctions() {
+  std::cout << "%%%% 06\n";
   VELOX_CHECK_NOT_NULL(windowNode_);
   VELOX_CHECK(windowFunctions_.empty());
   VELOX_CHECK(windowFrames_.empty());
@@ -140,6 +148,7 @@ void Window::createWindowFunctions() {
 
     windowFrames_.push_back(
         createWindowFrame(windowNodeFunction.frame, inputType));
+      std::cout << "%%%% 07\n";
   }
 }
 

@@ -473,5 +473,34 @@ TEST_F(LeadLagTest, ignoreNulls) {
   }
 }
 
+TEST_F(LeadLagTest, simple) {
+
+      auto input = makeRowVector({
+      // Values.
+      makeFlatVector<int64_t>({10, 5, 20}),
+      makeFlatVector<std::string>({"a", "a", "a"}),
+      // Offsets.
+      // makeFlatVector<int64_t>({1, 2, 3, 1, 2}),
+      // Offsets with nulls.
+      // makeNullableFlatVector<int64_t>({1, 2, 3, std::nullopt, 2}),
+      // Large offsets.
+      // makeFlatVector<int64_t>(
+      //     {largeOffset, largeOffset, largeOffset, largeOffset, largeOffset}),
+      // Default values.
+      // makeNullableFlatVector<int64_t>({std::nullopt, 99, 99, 99, std::nullopt}),
+  });
+
+  // createDuckDbTable({input});
+
+  bool createTable = true;
+  WindowTestBase::testWindowFunction(
+        {input},
+        "lag(c0, 1, 100)",
+        {"partition by c1 order by c0 asc"},
+        {"rows between 1 preceding and 1 following"},
+        createTable);
+
+}
+
 } // namespace
 } // namespace facebook::velox::window::test
