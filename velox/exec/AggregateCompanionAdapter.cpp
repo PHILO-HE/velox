@@ -266,10 +266,13 @@ bool CompanionFunctionsRegistrar::registerPartialFunction(
                  const core::QueryConfig& config)
                  -> std::unique_ptr<Aggregate> {
                if (auto func = getAggregateFunctionEntry(name)) {
+                 core::AggregationNode::Step usedStep{
+                     core::AggregationNode::Step::kPartial};
                  if (!exec::isRawInput(step)) {
-                   step = core::AggregationNode::Step::kIntermediate;
+                   usedStep = core::AggregationNode::Step::kIntermediate;
                  }
-                 auto fn = func->factory(step, argTypes, resultType, config);
+                 auto fn =
+                     func->factory(usedStep, argTypes, resultType, config);
                  VELOX_CHECK_NOT_NULL(fn);
                  return std::make_unique<
                      AggregateCompanionAdapter::PartialFunction>(
@@ -400,15 +403,17 @@ bool CompanionFunctionsRegistrar::registerMergeExtractFunction(
     const std::string& name,
     const std::vector<AggregateFunctionSignaturePtr>& signatures,
     bool overwrite) {
+  bool registered = false;
   if (CompanionSignatures::hasSameIntermediateTypesAcrossSignatures(
           signatures)) {
-    return registerMergeExtractFunctionWithSuffix(name, signatures, overwrite);
+    registered |=
+        registerMergeExtractFunctionWithSuffix(name, signatures, overwrite);
   }
 
   auto mergeExtractSignatures =
       CompanionSignatures::mergeExtractFunctionSignatures(signatures);
   if (mergeExtractSignatures.empty()) {
-    return false;
+    return registered;
   }
 
   auto mergeExtractFunctionName =
