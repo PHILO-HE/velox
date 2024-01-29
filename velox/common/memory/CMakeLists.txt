@@ -40,5 +40,5 @@ target_link_libraries(
          Folly::folly
          fmt::fmt
          gflags::gflags
-         glog::glog
+  PRIVATE glog::glog
   PRIVATE velox_test_util re2::re2)

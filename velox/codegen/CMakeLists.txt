@@ -17,5 +17,5 @@ if(${VELOX_CODEGEN_SUPPORT})
   target_link_libraries(velox_codegen velox_experimental_codegen)
 else()
   target_link_libraries(velox_codegen velox_core velox_exec velox_expression
-                        glog::glog)
+  PRIVATE glog::glog)
 endif()

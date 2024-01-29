@@ -26,7 +26,7 @@ if(VELOX_ENABLE_ABFS)
            velox_dwio_common_exception
            Azure::azure-storage-blobs
            Folly::folly
-           glog::glog
+    PRIVATE glog::glog
            fmt::fmt)
 
   if(${VELOX_BUILD_TESTING})

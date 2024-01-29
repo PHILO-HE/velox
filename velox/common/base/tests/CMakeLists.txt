@@ -62,7 +62,7 @@ target_link_libraries(
   velox_memory
   Boost::headers
   gflags::gflags
-  glog::glog
+  PRIVATE glog::glog
   gtest
   gtest_main
   pthread)

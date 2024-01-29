@@ -15,7 +15,7 @@
 add_library(velox_exception Exceptions.cpp VeloxException.cpp Exceptions.h)
 target_link_libraries(
   velox_exception PUBLIC velox_flag_definitions velox_process Folly::folly
-                         fmt::fmt gflags::gflags glog::glog)
+                         fmt::fmt gflags::gflags PRIVATE glog::glog)
 
 add_library(
   velox_common_base
@@ -34,7 +34,7 @@ add_library(
 target_link_libraries(
   velox_common_base
   PUBLIC velox_exception Folly::folly fmt::fmt xsimd
-  PRIVATE velox_common_compression velox_process velox_test_util glog::glog)
+  PRIVATE velox_common_compression velox_process velox_test_util PRIVATE glog::glog)
 
 if(${VELOX_BUILD_TESTING})
   add_subdirectory(tests)
@@ -50,7 +50,7 @@ target_link_libraries(
   velox_memory
   velox_flag_definitions
   velox_process
-  glog::glog
+  PRIVATE glog::glog
   Folly::folly
   fmt::fmt
   gflags::gflags)

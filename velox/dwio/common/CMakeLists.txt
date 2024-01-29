@@ -77,4 +77,4 @@ target_link_libraries(
   velox_exec
   Boost::regex
   Folly::folly
-  glog::glog)
+  PRIVATE glog::glog)
