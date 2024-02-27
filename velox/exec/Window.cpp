@@ -284,8 +284,13 @@ void updateKRowsOffsetsColumn(
   // moves ahead.
   int precedingFactor = isKPreceding ? -1 : 1;
   for (auto i = 0; i < numRows; i++) {
-    rawFrameBounds[i] =
-        (startRow + i) + vector_size_t(precedingFactor * offsets[i]);
+    auto startValue = (int64_t)(startRow + i) + precedingFactor * offsets[i];
+    // Considers integer overflow case.
+    if (startValue != (int32_t)startValue) {
+      rawFrameBounds[i] = startValue < 0 ? 0 : numRows - 1;
+    } else {
+      rawFrameBounds[i] = startValue;
+    }
   }
 }
 
@@ -301,12 +306,12 @@ void Window::updateKRowsFrameBounds(
     auto constantOffset = frameArg.constant.value();
     auto startValue =
         (isKPreceding ? -constantOffset : constantOffset) + startRow;
-    // std::iota(rawFrameBounds, rawFrameBounds + numRows, startValue);
     for (int i = 0; i < numRows; i++) {
+      // Considers integer overflow case.
       if (startValue != (int32_t)startValue) {
-        *(rawFrameBounds + i) = startValue < 0 ? 0 : numRows - 1;
+        rawFrameBounds[i] = startValue < 0 ? 0 : numRows - 1;
       } else {
-        *(rawFrameBounds + i) = startValue;
+        rawFrameBounds[i] = startValue;
       }
       startValue = startValue + 1;
     }
