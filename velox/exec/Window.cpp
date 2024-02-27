@@ -305,6 +305,7 @@ void Window::updateKRowsFrameBounds(
     for (int i = 0; i < numRows; i++) {
       if (startValue != (int32_t)startValue) {
         std::fill(rawFrameBounds + i, rawFrameBounds + numRows, numRows - 1);
+        break;
       } else {
         *(rawFrameBounds + i) = startValue;
       }
