@@ -300,8 +300,16 @@ void Window::updateKRowsFrameBounds(
   if (frameArg.index == kConstantChannel) {
     auto constantOffset = frameArg.constant.value();
     auto startValue =
-        startRow + (isKPreceding ? -constantOffset : constantOffset);
-    std::iota(rawFrameBounds, rawFrameBounds + numRows, startValue);
+        (isKPreceding ? -constantOffset : constantOffset) + startRow;
+    // std::iota(rawFrameBounds, rawFrameBounds + numRows, startValue);
+    for (int i = 0; i < numRows; i++) {
+      if (startValue != (int32_t)startValue) {
+        std::fill(rawFrameBounds + i, rawFrameBounds + numRows, numRows - 1);
+      } else {
+        *(rawFrameBounds + i) = startValue;
+      }
+      startValue = startValue + 1;
+    }
   } else {
     currentPartition_->extractColumn(
         frameArg.index, partitionOffset_, numRows, 0, frameArg.value);
