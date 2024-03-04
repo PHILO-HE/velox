@@ -679,10 +679,6 @@ class MemoryPoolImpl : public MemoryPool {
 
   void testingSetCapacity(int64_t bytes);
 
-  MemoryManager* testingManager() const {
-    return manager_;
-  }
-
   MemoryAllocator* testingAllocator() const {
     return allocator_;
   }

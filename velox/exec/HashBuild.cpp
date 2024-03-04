@@ -452,7 +452,6 @@ bool HashBuild::ensureInputFits(RowVectorPtr& input) {
 bool HashBuild::reserveMemory(const RowVectorPtr& input) {
   VELOX_CHECK(spillEnabled());
 
-  Operator::ReclaimableSectionGuard guard(this);
   numSpillRows_ = 0;
   numSpillBytes_ = 0;
 
@@ -469,10 +468,9 @@ bool HashBuild::reserveMemory(const RowVectorPtr& input) {
   if (numRows != 0) {
     // Test-only spill path.
     if (testingTriggerSpill()) {
-      memory::testingRunArbitration(pool());
-      // NOTE: the memory arbitration should have triggered spilling on this
-      // hash build operator so we return true to indicate have enough memory.
-      return true;
+      numSpillRows_ = std::max<int64_t>(1, numRows / 10);
+      numSpillBytes_ = numSpillRows_ * outOfLineBytesPerRow;
+      return false;
     }
 
     // We check usage from the parent pool to take peers' allocations into
@@ -524,8 +522,11 @@ bool HashBuild::reserveMemory(const RowVectorPtr& input) {
       incrementBytes * 2,
       currentUsage * spillConfig_->spillableReservationGrowthPct / 100);
 
-  if (pool()->maybeReserve(targetIncrementBytes)) {
-    return true;
+  {
+    Operator::ReclaimableSectionGuard guard(this);
+    if (pool()->maybeReserve(targetIncrementBytes)) {
+      return true;
+    }
   }
 
   LOG(WARNING) << "Failed to reserve " << succinctBytes(targetIncrementBytes)
