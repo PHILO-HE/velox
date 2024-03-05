@@ -167,7 +167,7 @@ function install_boost {
   cd "${DEPENDENCY_DIR}"
   wget_and_untar https://github.com/boostorg/boost/releases/download/boost-1.84.0/boost-1.84.0.tar.gz boost
   cd boost
-  ./bootstrap.sh --prefix=/usr/local --with-python=/usr/bin/python3 --with-python-root=/usr/lib/python3.6 --without-libraries=python
+  ./bootstrap.sh --prefix=/usr/local --without-libraries=python
   $SUDO ./b2 "-j$(nproc)" -d0 install threading=multi
 }
 
