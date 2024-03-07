@@ -40,10 +40,7 @@ const std::string& getColumnName(const common::Subfield& subfield);
 
 void checkColumnNameLowerCase(const std::shared_ptr<const Type>& type);
 
-void checkColumnNameLowerCase(
-    const SubfieldFilters& filters,
-    const std::unordered_map<std::string, std::shared_ptr<HiveColumnHandle>>&
-        infoColumns);
+void checkColumnNameLowerCase(const SubfieldFilters& filters);
 
 void checkColumnNameLowerCase(const core::TypedExprPtr& typeExpr);
 
@@ -55,8 +52,6 @@ std::shared_ptr<common::ScanSpec> makeScanSpec(
     const RowTypePtr& dataColumns,
     const std::unordered_map<std::string, std::shared_ptr<HiveColumnHandle>>&
         partitionKeys,
-    const std::unordered_map<std::string, std::shared_ptr<HiveColumnHandle>>&
-        infoColumns,
     memory::MemoryPool* pool);
 
 void configureReaderOptions(

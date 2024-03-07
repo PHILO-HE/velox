@@ -15,7 +15,6 @@
  */
 #pragma once
 
-#include <sys/stat.h>
 #include <unistd.h>
 #include <cstdlib>
 #include <fstream>
@@ -46,18 +45,6 @@ class TempFilePath {
     file << data;
     file.flush();
     file.close();
-  }
-
-  const int64_t fileSize() {
-    struct stat st;
-    stat(path.data(), &st);
-    return st.st_size;
-  }
-
-  const int64_t fileModifiedTime() {
-    struct stat st;
-    stat(path.data(), &st);
-    return st.st_mtime;
   }
 
  private:

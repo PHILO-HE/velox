@@ -36,8 +36,7 @@ struct HiveIcebergSplit : public connector::hive::HiveConnectorSplit {
           _partitionKeys = {},
       std::optional<int32_t> _tableBucketNumber = std::nullopt,
       const std::unordered_map<std::string, std::string>& _customSplitInfo = {},
-      const std::shared_ptr<std::string>& _extraFileInfo = {},
-      const std::unordered_map<std::string, std::string>& _infoColumns = {});
+      const std::shared_ptr<std::string>& _extraFileInfo = {});
 
   // For tests only
   HiveIcebergSplit(
@@ -51,8 +50,7 @@ struct HiveIcebergSplit : public connector::hive::HiveConnectorSplit {
       std::optional<int32_t> _tableBucketNumber = std::nullopt,
       const std::unordered_map<std::string, std::string>& _customSplitInfo = {},
       const std::shared_ptr<std::string>& _extraFileInfo = {},
-      std::vector<IcebergDeleteFile> deletes = {},
-      const std::unordered_map<std::string, std::string>& _infoColumns = {});
+      std::vector<IcebergDeleteFile> deletes = {});
 };
 
 } // namespace facebook::velox::connector::hive::iceberg

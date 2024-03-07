@@ -87,7 +87,7 @@ TEST_F(HiveConnectorTest, makeScanSpec_requiredSubfields_multilevel) {
   auto rowType = ROW({{"c0", columnType}});
   auto subfields = makeSubfields({"c0.c0c1[3][\"foo\"].c0c1c0"});
   auto scanSpec = makeScanSpec(
-      rowType, groupSubfields(subfields), {}, nullptr, {}, {}, pool_.get());
+      rowType, groupSubfields(subfields), {}, nullptr, {}, pool_.get());
   auto* c0c0 = scanSpec->childByName("c0")->childByName("c0c0");
   validateNullConstant(*c0c0, *BIGINT());
   auto* c0c1 = scanSpec->childByName("c0")->childByName("c0c1");
@@ -122,7 +122,6 @@ TEST_F(HiveConnectorTest, makeScanSpec_requiredSubfields_mergeFields) {
       {},
       nullptr,
       {},
-      {},
       pool_.get());
   auto* c0c0 = scanSpec->childByName("c0")->childByName("c0c0");
   ASSERT_FALSE(c0c0->childByName("c0c0c0")->isConstant());
@@ -145,7 +144,6 @@ TEST_F(HiveConnectorTest, makeScanSpec_requiredSubfields_mergeArray) {
       {},
       nullptr,
       {},
-      {},
       pool_.get());
   auto* c0 = scanSpec->childByName("c0");
   ASSERT_EQ(c0->maxArrayElementsCount(), 2);
@@ -162,7 +160,7 @@ TEST_F(HiveConnectorTest, makeScanSpec_requiredSubfields_mergeArrayNegative) {
   auto subfields = makeSubfields({"c0[1].c0c0", "c0[-1].c0c2"});
   auto groupedSubfields = groupSubfields(subfields);
   VELOX_ASSERT_USER_THROW(
-      makeScanSpec(rowType, groupedSubfields, {}, nullptr, {}, {}, pool_.get()),
+      makeScanSpec(rowType, groupedSubfields, {}, nullptr, {}, pool_.get()),
       "Non-positive array subscript cannot be push down");
 }
 
@@ -176,7 +174,6 @@ TEST_F(HiveConnectorTest, makeScanSpec_requiredSubfields_mergeMap) {
       groupSubfields(makeSubfields({"c0[10].c0c0", "c0[20].c0c2"})),
       {},
       nullptr,
-      {},
       {},
       pool_.get());
   auto* c0 = scanSpec->childByName("c0");
@@ -203,7 +200,6 @@ TEST_F(HiveConnectorTest, makeScanSpec_requiredSubfields_allSubscripts) {
         {},
         nullptr,
         {},
-        {},
         pool_.get());
     auto* c0 = scanSpec->childByName("c0");
     ASSERT_FALSE(c0->childByName(ScanSpec::kMapKeysFieldName)->filter());
@@ -221,7 +217,6 @@ TEST_F(HiveConnectorTest, makeScanSpec_requiredSubfields_allSubscripts) {
       groupSubfields(makeSubfields({"c0[*][*].c0c0"})),
       {},
       nullptr,
-      {},
       {},
       pool_.get());
   auto* c0 = scanSpec->childByName("c0");
@@ -244,7 +239,6 @@ TEST_F(HiveConnectorTest, makeScanSpec_requiredSubfields_doubleMapKey) {
       groupSubfields(makeSubfields({"c0[0]", "c1[-1]"})),
       {},
       nullptr,
-      {},
       {},
       pool_.get());
   auto* keysFilter = scanSpec->childByName("c0")
@@ -273,7 +267,6 @@ TEST_F(HiveConnectorTest, makeScanSpec_requiredSubfields_doubleMapKey) {
       {},
       nullptr,
       {},
-      {},
       pool_.get());
   keysFilter = scanSpec->childByName("c0")
                    ->childByName(ScanSpec::kMapKeysFieldName)
@@ -292,7 +285,6 @@ TEST_F(HiveConnectorTest, makeScanSpec_requiredSubfields_doubleMapKey) {
       {},
       nullptr,
       {},
-      {},
       pool_.get());
   keysFilter = scanSpec->childByName("c0")
                    ->childByName(ScanSpec::kMapKeysFieldName)
@@ -307,7 +299,6 @@ TEST_F(HiveConnectorTest, makeScanSpec_requiredSubfields_doubleMapKey) {
       groupSubfields(makeSubfields({"c0[-100000000]", "c0[100000000]"})),
       {},
       nullptr,
-      {},
       {},
       pool_.get());
   keysFilter = scanSpec->childByName("c0")
@@ -343,7 +334,6 @@ TEST_F(HiveConnectorTest, makeScanSpec_filtersNotInRequiredSubfields) {
       groupSubfields(makeSubfields({"c0.c0c1", "c0.c0c3"})),
       filters,
       ROW({{"c0", c0Type}, {"c1", c1Type}}),
-      {},
       {},
       pool_.get());
   auto c0 = scanSpec->childByName("c0");
@@ -389,7 +379,6 @@ TEST_F(HiveConnectorTest, makeScanSpec_duplicateSubfields) {
       {},
       nullptr,
       {},
-      {},
       pool_.get());
   auto* c0 = scanSpec->childByName("c0");
   ASSERT_EQ(c0->children().size(), 2);
@@ -403,7 +392,7 @@ TEST_F(HiveConnectorTest, makeScanSpec_filterPartitionKey) {
   SubfieldFilters filters;
   filters.emplace(Subfield("ds"), exec::equal("2023-10-13"));
   auto scanSpec = makeScanSpec(
-      rowType, {}, filters, rowType, {{"ds", nullptr}}, {}, pool_.get());
+      rowType, {}, filters, rowType, {{"ds", nullptr}}, pool_.get());
   ASSERT_TRUE(scanSpec->childByName("c0")->projectOut());
   ASSERT_FALSE(scanSpec->childByName("ds")->projectOut());
 }
