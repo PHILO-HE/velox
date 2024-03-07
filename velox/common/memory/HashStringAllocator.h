@@ -326,7 +326,7 @@ class HashStringAllocator : public StreamArena {
   }
 
   // Frees all memory associated with 'this' and leaves 'this' ready for reuse.
-  void clear() override;
+  void clear();
 
   memory::MemoryPool* FOLLY_NONNULL pool() const {
     return pool_.pool();

@@ -1351,15 +1351,13 @@ class VectorStream {
       int32_t initialNumRows,
       const SerdeOpts& opts)
       : type_(type),
-        streamArena_(streamArena),
-        useLosslessTimestamp_(opts.useLosslessTimestamp),
-        nullsFirst_(opts.nullsFirst),
-        isLongDecimal_(type_->isLongDecimal()),
-        opts_(opts),
         encoding_(getEncoding(encoding, vector)),
+        opts_(opts),
+        streamArena_(streamArena),
         nulls_(streamArena, true, true),
         lengths_(streamArena),
-        values_(streamArena) {
+        values_(streamArena),
+        isLongDecimal_(type_->isLongDecimal()) {
     if (initialNumRows == 0) {
       initializeHeader(typeToEncodingName(type), *streamArena);
       return;
@@ -1682,27 +1680,6 @@ class VectorStream {
     return isLongDecimal_;
   }
 
-  void clear() {
-    encoding_ = std::nullopt;
-    initializeHeader(typeToEncodingName(type_), *streamArena_);
-    nonNullCount_ = 0;
-    nullCount_ = 0;
-    totalLength_ = 0;
-    if (hasLengths_) {
-      lengths_.startWrite(lengths_.size());
-      if (type_->kind() == TypeKind::ROW || type_->kind() == TypeKind::ARRAY ||
-          type_->kind() == TypeKind::MAP) {
-        // A complex type has a 0 as first length.
-        lengths_.appendOne<int32_t>(0);
-      }
-    }
-    nulls_.startWrite(nulls_.size());
-    values_.startWrite(values_.size());
-    for (auto& child : children_) {
-      child->clear();
-    }
-  }
-
  private:
   void initializeFlatStream(
       std::optional<VectorPtr> vector,
@@ -1750,15 +1727,10 @@ class VectorStream {
   }
 
   const TypePtr type_;
-  StreamArena* const streamArena_;
-  /// Indicates whether to serialize timestamps with nanosecond precision.
-  /// If false, they are serialized with millisecond precision which is
-  /// compatible with presto.
-  const bool useLosslessTimestamp_;
-  const bool nullsFirst_;
-  const bool isLongDecimal_;
-  const SerdeOpts opts_;
   std::optional<VectorEncoding::Simple> encoding_;
+  const SerdeOpts opts_;
+
+  StreamArena* streamArena_;
   int32_t nonNullCount_{0};
   int32_t nullCount_{0};
   int32_t totalLength_{0};
@@ -1768,6 +1740,7 @@ class VectorStream {
   ByteOutputStream lengths_;
   ByteOutputStream values_;
   std::vector<std::unique_ptr<VectorStream>> children_;
+  const bool isLongDecimal_;
   bool isDictionaryStream_{false};
   bool isConstantStream_{false};
 };
@@ -3658,13 +3631,6 @@ class PrestoIterativeVectorSerializer : public IterativeVectorSerializer {
   // checksum(8) | data
   void flush(OutputStream* out) override {
     flushStreams(streams_, numRows_, *streamArena_, *codec_, out);
-  }
-
-  void clear() override {
-    numRows_ = 0;
-    for (auto& stream : streams_) {
-      stream->clear();
-    }
   }
 
  private:
