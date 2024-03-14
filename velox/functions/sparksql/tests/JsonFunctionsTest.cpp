@@ -40,6 +40,9 @@ TEST_F(JsonFunctionTest, getJsonObject) {
   EXPECT_EQ(getJsonObject(R"({"my": {"hello": true}})", "$.my.hello"), "true");
   EXPECT_EQ(getJsonObject(R"({"hello": ""})", "$.hello"), "");
   EXPECT_EQ(
+      "0.0215434648799772",
+      getJsonObject(R"({"score":0.0215434648799772})", "$.score"));
+  EXPECT_EQ(
       getJsonObject(R"({"name": "Alice", "age": 5, "id": "001"})", "$.age"),
       "5");
   EXPECT_EQ(

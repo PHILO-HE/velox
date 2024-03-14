@@ -93,7 +93,7 @@ struct SIMDGetJsonObjectFunction {
             double numberResult;
             error = rawResult.get_double().get(numberResult);
             if (!error) {
-              ss << numberResult;
+              ss << rawResult;
               result.append(ss.str());
             }
             return error;
