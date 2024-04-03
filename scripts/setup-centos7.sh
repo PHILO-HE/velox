@@ -26,7 +26,7 @@ export CFLAGS=$(get_cxx_flags $CPU_TARGET)  # Used by LZO.
 export CXXFLAGS=$CFLAGS  # Used by boost.
 export CPPFLAGS=$CFLAGS  # Used by LZO.
 export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/lib/pkgconfig:$PKG_CONFIG_PATH
-FB_OS_VERSION=v2023.12.04.00
+FB_OS_VERSION=v2024.02.26.00
 
 # shellcheck disable=SC2037
 SUDO="sudo -E"
@@ -42,13 +42,6 @@ function dnf_install {
 
 function yum_install {
   $SUDO yum install -y "$@"
-}
-
-function cmake_install_deps {
-  cmake -B"$1-build" -GNinja -DCMAKE_CXX_STANDARD=17 \
-    -DCMAKE_CXX_FLAGS="${CFLAGS}" -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_BUILD_TYPE=Release -Wno-dev "$@"
-  ninja -C "$1-build"
-  $SUDO ninja -C "$1-build" install
 }
 
 function wget_and_untar {
@@ -246,7 +239,7 @@ dnf_install epel-release dnf-plugins-core # For ccache, ninja
 # dnf config-manager --set-enabled powertools
 dnf_install ccache git wget which libevent-devel \
   openssl-devel libzstd-devel lz4-devel double-conversion-devel \
-  curl-devel cmake libxml2-devel libgsasl-devel libuuid-devel patch
+  curl-devel libxml2-devel libgsasl-devel libuuid-devel patch
 
 $SUDO dnf remove -y gflags
 
