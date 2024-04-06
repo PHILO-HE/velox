@@ -2743,6 +2743,12 @@ TEST_F(DateTimeFunctionsTest, parseDatetime) {
       "Invalid format: \"2024-02-25+06:00:99 PST\" is malformed at \"PST\"");
 }
 
+TEST_F(DateTimeFunctionsTest, useUnsupportedTZ) {
+  using util::fromTimestampString;
+  setQueryTimeZone("GMT+8");
+  formatDatetime(fromTimestampString("1970-01-01"), "yyyy");
+}
+
 TEST_F(DateTimeFunctionsTest, formatDateTime) {
   using util::fromTimestampString;
 
