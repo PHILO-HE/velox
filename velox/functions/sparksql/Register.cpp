@@ -23,6 +23,7 @@
 #include "velox/functions/lib/RegistrationHelpers.h"
 #include "velox/functions/lib/Repeat.h"
 #include "velox/functions/prestosql/ArrayFunctions.h"
+#include "velox/functions/prestosql/BinaryFunctions.h"
 #include "velox/functions/prestosql/DateTimeFunctions.h"
 #include "velox/functions/prestosql/JsonFunctions.h"
 #include "velox/functions/prestosql/StringFunctions.h"
@@ -94,6 +95,13 @@ static void workAroundRegistrationMacro(const std::string& prefix) {
   VELOX_REGISTER_VECTOR_FUNCTION(udf_array_contains, prefix + "array_contains");
   VELOX_REGISTER_VECTOR_FUNCTION(
       udf_array_intersect, prefix + "array_intersect");
+  VELOX_REGISTER_VECTOR_FUNCTION(udf_array_distinct, prefix + "array_distinct");
+  VELOX_REGISTER_VECTOR_FUNCTION(udf_array_except, prefix + "array_except");
+  VELOX_REGISTER_VECTOR_FUNCTION(udf_array_position, prefix + "array_position");
+  VELOX_REGISTER_VECTOR_FUNCTION(udf_map_entries, prefix + "map_entries");
+  VELOX_REGISTER_VECTOR_FUNCTION(udf_map_keys, prefix + "map_keys");
+  VELOX_REGISTER_VECTOR_FUNCTION(udf_map_values, prefix + "map_values");
+
   // This is the semantics of spark.sql.ansi.enabled = false.
   registerElementAtFunction(prefix + "element_at", true);
 
@@ -201,6 +209,7 @@ void registerFunctions(const std::string& prefix) {
       Varchar,
       Varchar,
       Varchar>({prefix + "str_to_map"});
+  VELOX_REGISTER_VECTOR_FUNCTION(udf_reverse, prefix + "reverse");
 
   registerFunction<sparksql::LeftFunction, Varchar, Varchar, int32_t>(
       {prefix + "left"});
@@ -222,11 +231,18 @@ void registerFunctions(const std::string& prefix) {
       {prefix + "sha1"});
   registerFunction<Sha2HexStringFunction, Varchar, Varbinary, int32_t>(
       {prefix + "sha2"});
+  registerFunction<CRC32Function, int64_t, Varbinary>({prefix + "crc32"});
 
   exec::registerStatefulVectorFunction(
       prefix + "regexp_extract", re2ExtractSignatures(), makeRegexExtract);
   exec::registerStatefulVectorFunction(
+      prefix + "regexp_extract_all",
+      re2ExtractAllSignatures(),
+      makeRe2ExtractAll);
+  exec::registerStatefulVectorFunction(
       prefix + "rlike", re2SearchSignatures(), makeRLike);
+  exec::registerStatefulVectorFunction(
+      prefix + "like", likeSignatures(), makeLike);
   VELOX_REGISTER_VECTOR_FUNCTION(udf_regexp_split, prefix + "split");
 
   exec::registerStatefulVectorFunction(
