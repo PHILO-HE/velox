@@ -26,6 +26,7 @@
 #include "velox/functions/prestosql/BinaryFunctions.h"
 #include "velox/functions/prestosql/DateTimeFunctions.h"
 #include "velox/functions/prestosql/StringFunctions.h"
+#include "velox/functions/prestosql/URLFunctions.h"
 #include "velox/functions/sparksql/ArrayMinMaxFunction.h"
 #include "velox/functions/sparksql/ArraySort.h"
 #include "velox/functions/sparksql/ArrayUnionFunction.h"
@@ -322,6 +323,11 @@ void registerFunctions(const std::string& prefix) {
 
   registerFunction<FindInSetFunction, int32_t, Varchar, Varchar>(
       {prefix + "find_in_set"});
+
+  registerFunction<UrlEncodeFunction, Varchar, Varchar>(
+      {prefix + "url_encode"});
+  registerFunction<UrlDecodeFunction, Varchar, Varchar>(
+      {prefix + "url_decode"});
 
   // Register array sort functions.
   exec::registerStatefulVectorFunction(
