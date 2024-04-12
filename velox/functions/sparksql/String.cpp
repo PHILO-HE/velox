@@ -112,9 +112,9 @@ void doApply(
   std::vector<column_index_t> argMapping;
   std::vector<std::string> constantStrings;
   auto numArgs = args.size();
-  // Save constant values to constantStrings_.
-  // Identify and combine consecutive constant inputs.
   argMapping.reserve(numArgs - 1);
+  // Save intermediate result for consecutive constant string args.
+  // They are concatenated in advance.
   constantStrings.reserve(numArgs - 1);
   // For each array arg, save rawSizes, rawOffsets, indices, and elements
   // BaseBector.
@@ -142,8 +142,8 @@ void doApply(
     }
     // Handles string arg.
     argMapping.push_back(i);
-    // Cannot concat string args in advance.
     if (!separator.has_value()) {
+      // Cannot concat consecutive constant string args in advance.
       constantStrings.push_back("");
       continue;
     }
@@ -169,7 +169,7 @@ void doApply(
     }
   }
 
-  // Number of string columns after combined constant ones.
+  // Number of string columns after combined consecutive constant ones.
   auto numStringCols = constantStrings.size();
   // For column string arg decoding.
   std::vector<exec::LocalDecodedVector> decodedStringArgs;
@@ -369,7 +369,9 @@ std::shared_ptr<exec::VectorFunction> makeLength(
 
 std::vector<std::shared_ptr<exec::FunctionSignature>> concatWsSignatures() {
   return {// The second and folowing arguments are varchar or array(varchar).
-          // The argument type will be checked in makeConcatWs.
+          // Use "any" to allow the mixed using of these two types. The
+          // argument type will be checked in makeConcatWs.
+          //
           // varchar, [varchar], [array(varchar)], ... -> varchar.
           exec::FunctionSignatureBuilder()
               .returnType("varchar")

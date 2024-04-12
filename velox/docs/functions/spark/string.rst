@@ -22,11 +22,11 @@ Unless specified otherwise, all functions return NULL if at least one of the arg
 
 .. spark:function:: concat_ws(separator, [string]/[array<string>], ...) -> varchar
 
-   Returns the concatenation for ``string`` and all elements in ``array<string>``, separated
+   Returns the concatenation of ``string`` and all elements in ``array<string>``, separated
    by ``separator``. ``separator`` can be empty string. It takes variable number of remaining
    arguments. And ``string`` & ``array<string>`` can be used in combination. NULL element is
    skipped in the concatenation. If ``separator`` is NULL, returns NULL, regardless of the
-   following inputs. For non-NULL ``separator``, if only it is provided or all remaining inputs
+   following inputs. For non-NULL ``separator``, if no remaining input or all remaining inputs
    are NULL, returns an empty string. ::
 
         SELECT concat_ws('~', 'a', 'b', 'c'); -- 'a~b~c'
