@@ -55,9 +55,10 @@ int main(int argc, char** argv) {
       "replace",
       "might_contain",
       "unix_timestamp",
-      // Skip concat_ws as it triggers a test failure due to an incorrect
-      // expression generation from fuzzer:
-      // https://github.com/facebookincubator/velox/issues/6590
+      // Skip concat_ws due to the below issue:
+      // We use "any" type in its signature to allow mixed
+      // using of VARCHAR & ARRAY<VARCHAR>. But the fuzzer
+      // couldn't generate correct expressions for it.
       "concat_ws"};
 
   // Required by spark_partition_id function.
