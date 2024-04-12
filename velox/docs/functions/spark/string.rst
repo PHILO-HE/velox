@@ -22,18 +22,21 @@ Unless specified otherwise, all functions return NULL if at least one of the arg
 
 .. spark:function:: concat_ws(separator, [string]/[array<string>], ...) -> varchar
 
-   Returns the concatenation for ``string`` & all elements in ``array<string>``, separated by
-   ``separator``. Only accepts constant ``separator``. It takes variable number of remaining
-   arguments. And ``string`` & ``array<string>`` can be used in combination.  If ``separator``
-   is NULL, returns NULL, regardless of the following inputs. If only ``separator`` (not a
-   NULL) is provided or all remaining inputs are NULL, returns an empty string. ::
+   Returns the concatenation for ``string`` and all elements in ``array<string>``, separated
+   by ``separator``. ``separator`` can be empty string. It takes variable number of remaining
+   arguments. And ``string`` & ``array<string>`` can be used in combination. NULL element is
+   skipped in the concatenation. If ``separator`` is NULL, returns NULL, regardless of the
+   following inputs. For non-NULL ``separator``, if only it is provided or all remaining inputs
+   are NULL, returns an empty string. ::
 
         SELECT concat_ws('~', 'a', 'b', 'c'); -- 'a~b~c'
         SELECT concat_ws('~', ['a', 'b', 'c'], ['d']); -- 'a~b~c~d'
         SELECT concat_ws('~', 'a', ['b', 'c']); -- 'a~b~c'
         SELECT concat_ws(NULL, 'a'); -- NULL
         SELECT concat_ws('~'); -- ''
+        SELECT concat_ws('~', NULL, [NULL], 'a', 'b'); -- 'a~b'
         SELECT concat_ws('~', NULL, NULL); -- ''
+        SELECT concat_ws('~', [NULL]); -- ''
 
 .. spark:function:: contains(left, right) -> boolean
 

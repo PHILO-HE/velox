@@ -107,7 +107,7 @@ void doApply(
     const SelectivityVector& rows,
     std::vector<VectorPtr>& args,
     exec::EvalCtx& context,
-    const std::string& separator,
+    const std::optional<std::string>& separator,
     FlatVector<StringView>& flatResult) {
   std::vector<column_index_t> argMapping;
   std::vector<std::string> constantStrings;
@@ -142,19 +142,24 @@ void doApply(
     }
     // Handles string arg.
     argMapping.push_back(i);
+    // Cannot concat string args in advance.
+    if (!separator.has_value()) {
+      constantStrings.push_back("");
+      continue;
+    }
     if (args[i] && args[i]->as<ConstantVector<StringView>>() &&
         !args[i]->as<ConstantVector<StringView>>()->isNullAt(0)) {
       std::ostringstream out;
       out << args[i]->as<ConstantVector<StringView>>()->valueAt(0);
       column_index_t j = i + 1;
-      // Concat constant string args.
+      // Concat constant string args in advance.
       for (; j < numArgs; ++j) {
         if (!args[j] || args[j]->typeKind() == TypeKind::ARRAY ||
             !args[j]->as<ConstantVector<StringView>>() ||
             args[j]->as<ConstantVector<StringView>>()->isNullAt(0)) {
           break;
         }
-        out << separator
+        out << separator.value()
             << args[j]->as<ConstantVector<StringView>>()->valueAt(0);
       }
       constantStrings.emplace_back(out.str());
@@ -169,18 +174,22 @@ void doApply(
   // For column string arg decoding.
   std::vector<exec::LocalDecodedVector> decodedStringArgs;
   decodedStringArgs.reserve(numStringCols);
-
   for (auto i = 0; i < numStringCols; ++i) {
     if (constantStrings[i].empty()) {
       auto index = argMapping[i];
       decodedStringArgs.emplace_back(context, *args[index], rows);
     }
   }
+  exec::LocalDecodedVector separatorDecoded(context);
+  if (!separator.has_value()) {
+    separatorDecoded = exec::LocalDecodedVector(context, *args[0], rows);
+  }
 
   // Calculate the total number of bytes in the result.
   size_t totalResultBytes = 0;
   rows.applyToSelected([&](auto row) {
     int32_t allElements = 0;
+    // Array arg.
     for (int i = 0; i < rawSizesVector.size(); i++) {
       auto size = rawSizesVector[i][indicesVector[i][row]];
       auto offset = rawOffsetsVector[i][indicesVector[i][row]];
@@ -194,6 +203,8 @@ void doApply(
         }
       }
     }
+
+    // String arg.
     auto it = decodedStringArgs.begin();
     for (int i = 0; i < numStringCols; i++) {
       auto value = constantStrings[i].empty()
@@ -204,8 +215,13 @@ void doApply(
         totalResultBytes += value.size();
       }
     }
-    if (allElements > 1) {
-      totalResultBytes += (allElements - 1) * separator.size();
+
+    int32_t separatorSize = separator.has_value()
+        ? separator.value().size()
+        : separatorDecoded->valueAt<StringView>(row).size();
+
+    if (allElements > 1 && separatorSize > 0) {
+      totalResultBytes += (allElements - 1) * separatorSize;
     }
   });
 
@@ -222,7 +238,7 @@ void doApply(
     int32_t j = 0;
     auto it = decodedStringArgs.begin();
 
-    auto copyToBuffer = [&](StringView value) {
+    auto copyToBuffer = [&](StringView value, StringView separator) {
       if (value.empty()) {
         return;
       }
@@ -230,9 +246,11 @@ void doApply(
         isFirst = false;
       } else {
         // Add separator before the current value.
-        memcpy(rawBuffer + bufferOffset, separator.data(), separator.size());
-        bufferOffset += separator.size();
-        combinedSize += separator.size();
+        if (!separator.empty()) {
+          memcpy(rawBuffer + bufferOffset, separator.data(), separator.size());
+          bufferOffset += separator.size();
+          combinedSize += separator.size();
+        }
       }
       memcpy(rawBuffer + bufferOffset, value.data(), value.size());
       combinedSize += value.size();
@@ -246,7 +264,11 @@ void doApply(
         for (int k = 0; k < size; ++k) {
           if (!decodedVectors[i].isNullAt(offset + k)) {
             auto element = decodedVectors[i].valueAt<StringView>(offset + k);
-            copyToBuffer(element);
+            copyToBuffer(
+                element,
+                separator.has_value()
+                    ? StringView(separator.value())
+                    : separatorDecoded->valueAt<StringView>(row));
           }
         }
         i++;
@@ -261,7 +283,10 @@ void doApply(
       } else {
         value = StringView(constantStrings[j]);
       }
-      copyToBuffer(value);
+      copyToBuffer(
+          value,
+          separator.has_value() ? StringView(separator.value())
+                                : separatorDecoded->valueAt<StringView>(row));
       j++;
     }
     flatResult.setNoCopy(row, StringView(start, combinedSize));
@@ -270,7 +295,8 @@ void doApply(
 
 class ConcatWs : public exec::VectorFunction {
  public:
-  explicit ConcatWs(const std::string& separator) : separator_(separator) {}
+  explicit ConcatWs(const std::optional<std::string>& separator)
+      : separator_(separator) {}
 
   void apply(
       const SelectivityVector& selected,
@@ -296,7 +322,8 @@ class ConcatWs : public exec::VectorFunction {
   }
 
  private:
-  const std::string separator_;
+  // If has no value, the separator is non-constant.
+  const std::optional<std::string> separator_;
 };
 
 } // namespace
@@ -371,12 +398,12 @@ std::shared_ptr<exec::VectorFunction> makeConcatWs(
   }
 
   BaseVector* constantPattern = inputArgs[0].constantValue.get();
-  VELOX_USER_CHECK(
-      nullptr != constantPattern,
-      "concat_ws requires constant separator arguments.");
+  std::optional<std::string> separator = std::nullopt;
+  if (constantPattern != nullptr) {
+    separator =
+        constantPattern->as<ConstantVector<StringView>>()->valueAt(0).str();
+  }
 
-  auto separator =
-      constantPattern->as<ConstantVector<StringView>>()->valueAt(0).str();
   return std::make_shared<ConcatWs>(separator);
 }
 

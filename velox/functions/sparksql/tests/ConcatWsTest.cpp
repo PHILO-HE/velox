@@ -88,7 +88,7 @@ class ConcatWsTest : public SparkFunctionBaseTest {
   }
 };
 
-TEST_F(ConcatWsTest, columnStringArgs) {
+TEST_F(ConcatWsTest, stringArgs) {
   // Test with constant args.
   auto rows = makeRowVector(makeRowType({VARCHAR(), VARCHAR()}), 10);
   auto c0 = generateRandomString(20);
@@ -118,10 +118,12 @@ TEST_F(ConcatWsTest, columnStringArgs) {
 
     SCOPED_TRACE(fmt::format("Number of arguments: {}", argsCount));
     testConcatWsFlatVector(inputTable, argsCount, "--testSep--");
+    // Test with empty separator.
+    testConcatWsFlatVector(inputTable, argsCount, "");
   }
 }
 
-TEST_F(ConcatWsTest, mixedConstantAndColumnStringArgs) {
+TEST_F(ConcatWsTest, mixedConstantAndNonconstantStringArgs) {
   size_t maxStringLength = 100;
   std::string value;
   auto data = makeRowVector({
@@ -183,63 +185,82 @@ TEST_F(ConcatWsTest, mixedConstantAndColumnStringArgs) {
 }
 
 TEST_F(ConcatWsTest, arrayArgs) {
-  using S = StringView;
   auto arrayVector = makeNullableArrayVector<StringView>({
-      {S("red"), S("blue")},
-      {S("blue"), std::nullopt, S("yellow"), std::nullopt, S("orange")},
+      {"red", "blue"},
+      {"blue", std::nullopt, "yellow", std::nullopt, "orange"},
       {},
       {std::nullopt},
-      {S("red"), S("purple"), S("green")},
+      {"red", "purple", "green"},
   });
 
   // One array arg.
   auto result = evaluate<SimpleVector<StringView>>(
       "concat_ws('----', c0)", makeRowVector({arrayVector}));
-  auto expected1 = {
-      S("red----blue"),
-      S("blue----yellow----orange"),
-      S(""),
-      S(""),
-      S("red----purple----green"),
-  };
-  velox::test::assertEqualVectors(
-      makeFlatVector<StringView>(expected1), result);
+  auto expected1 = makeFlatVector<StringView>({
+      "red----blue",
+      "blue----yellow----orange",
+      "",
+      "",
+      "red----purple----green",
+  });
+  velox::test::assertEqualVectors(expected1, result);
 
   // Two array args.
   result = evaluate<SimpleVector<StringView>>(
       "concat_ws('----', c0, c1)", makeRowVector({arrayVector, arrayVector}));
-  auto expected2 = {
-      S("red----blue----red----blue"),
-      S("blue----yellow----orange----blue----yellow----orange"),
-      S(""),
-      S(""),
-      S("red----purple----green----red----purple----green"),
-  };
-  velox::test::assertEqualVectors(
-      makeFlatVector<StringView>(expected2), result);
+  auto expected2 = makeFlatVector<StringView>({
+      "red----blue----red----blue",
+      "blue----yellow----orange----blue----yellow----orange",
+      "",
+      "",
+      "red----purple----green----red----purple----green",
+  });
+  velox::test::assertEqualVectors(expected2, result);
 }
 
-TEST_F(ConcatWsTest, mixedStringArrayArgs) {
-  using S = StringView;
+TEST_F(ConcatWsTest, mixedStringAndArrayArgs) {
   auto arrayVector = makeNullableArrayVector<StringView>({
-      {S("red"), S("blue")},
-      {S("blue"), std::nullopt, S("yellow"), std::nullopt, S("orange")},
+      {"red", "blue"},
+      {"blue", std::nullopt, "yellow", std::nullopt, "orange"},
       {},
       {std::nullopt},
-      {S("red"), S("purple"), S("green")},
+      {"red", "purple", "green"},
   });
 
   auto result = evaluate<SimpleVector<StringView>>(
       "concat_ws('----', c0, 'foo', c1, 'bar', 'end')",
       makeRowVector({arrayVector, arrayVector}));
-  auto expected = {
-      S("red----blue----foo----red----blue----bar----end"),
-      S("blue----yellow----orange----foo----blue----yellow----orange----bar----end"),
-      S("foo----bar----end"),
-      S("foo----bar----end"),
-      S("red----purple----green----foo----red----purple----green----bar----end"),
-  };
-  velox::test::assertEqualVectors(makeFlatVector<StringView>(expected), result);
+  auto expected = makeFlatVector<StringView>({
+      "red----blue----foo----red----blue----bar----end",
+      "blue----yellow----orange----foo----blue----yellow----orange----bar----end",
+      "foo----bar----end",
+      "foo----bar----end",
+      "red----purple----green----foo----red----purple----green----bar----end",
+  });
+  velox::test::assertEqualVectors(expected, result);
+}
+
+TEST_F(ConcatWsTest, nonconstantSeparator) {
+  auto separatorVector =
+      makeFlatVector<StringView>({"##", "--", "~~", "**", "++"});
+  auto arrayVector = makeNullableArrayVector<StringView>({
+      {"red", "blue"},
+      {"blue", std::nullopt, "yellow", std::nullopt, "orange"},
+      {"red", "blue"},
+      {"blue", std::nullopt, "yellow", std::nullopt, "orange"},
+      {"red", "purple", "green"},
+  });
+
+  auto result = evaluate<SimpleVector<StringView>>(
+      "concat_ws(c0, c1, '|')", makeRowVector({separatorVector, arrayVector}));
+  auto expected = makeFlatVector<StringView>({
+      "red##blue##|",
+      "blue--yellow--orange--|",
+      "red~~blue~~|",
+      "blue**yellow**orange**|",
+      "red++purple++green++|",
+  });
+  velox::test::assertEqualVectors(expected, result);
 }
 
 } // namespace
