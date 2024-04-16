@@ -272,7 +272,8 @@ class ConcatWs : public exec::VectorFunction {
         decodedSeparator);
 
     // Allocate a string buffer.
-    auto rawBuffer = flatResult.getRawStringBufferWithSpace(totalResultBytes);
+    auto rawBuffer =
+        flatResult.getRawStringBufferWithSpace(totalResultBytes, true);
     rows.applyToSelected([&](int row) {
       const char* start = rawBuffer;
       auto isFirst = true;
