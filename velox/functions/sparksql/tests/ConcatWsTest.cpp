@@ -219,7 +219,8 @@ TEST_F(ConcatWsTest, mixedStringAndArrayArgs) {
   auto result = evaluate<SimpleVector<StringView>>(
       "concat_ws('--', c0, 'foo', c1, 'bar', 'end', '')",
       makeRowVector({arrayVector, arrayVector}));
-  // Empty string & its neighboring inputs are also separated with separator.
+  // Empty string is also concatenated with its neighboring inputs,
+  // separated by given separator.
   auto expected = makeFlatVector<StringView>({
       "red--blue--foo--red--blue--bar--end--",
       "blue--yellow--orange--foo--blue--yellow--orange--bar--end--",
