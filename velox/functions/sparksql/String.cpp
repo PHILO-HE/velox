@@ -138,10 +138,9 @@ class ConcatWs : public exec::VectorFunction {
         for (int j = 0; j < size; ++j) {
           if (!elementsDecoded.isNullAt(offset + j)) {
             auto element = elementsDecoded.valueAt<StringView>(offset + j);
-            if (!element.empty()) {
-              allElements++;
-              totalResultBytes += element.size();
-            }
+            // No matter empty string or not.
+            allElements++;
+            totalResultBytes += element.size();
           }
         }
       }
@@ -149,13 +148,20 @@ class ConcatWs : public exec::VectorFunction {
       // Calculate size for string arg.
       auto it = decodedStringArgs.begin();
       for (int i = 0; i < constantStrings.size(); i++) {
-        auto value = constantStrings[i].empty()
-            ? (*it++)->valueAt<StringView>(row)
-            : StringView(constantStrings[i]);
-        if (!value.empty()) {
-          allElements++;
-          totalResultBytes += value.size();
+        StringView value;
+        if (!constantStrings[i].empty()) {
+          value = StringView(constantStrings[i]);
+        } else {
+          // Skip NULL.
+          if ((*it)->isNullAt(row)) {
+            ++it;
+            continue;
+          }
+          value = (*it++)->valueAt<StringView>(row);
         }
+        // No matter empty string or not.
+        allElements++;
+        totalResultBytes += value.size();
       }
 
       int32_t separatorSize = separator_.has_value()
@@ -277,9 +283,6 @@ class ConcatWs : public exec::VectorFunction {
       auto it = decodedStringArgs.begin();
 
       auto copyToBuffer = [&](StringView value, StringView separator) {
-        if (value.empty()) {
-          return;
-        }
         if (isFirst) {
           isFirst = false;
         } else {
@@ -289,8 +292,10 @@ class ConcatWs : public exec::VectorFunction {
             rawBuffer += separator.size();
           }
         }
-        memcpy(rawBuffer, value.data(), value.size());
-        rawBuffer += value.size();
+        if (!value.empty()) {
+          memcpy(rawBuffer, value.data(), value.size());
+          rawBuffer += value.size();
+        }
       };
 
       for (auto itArgs = args.begin() + 1; itArgs != args.end(); ++itArgs) {
@@ -322,14 +327,21 @@ class ConcatWs : public exec::VectorFunction {
           i++;
           continue;
         }
+
         if (j >= constantStrings.size()) {
           continue;
         }
+
         StringView value;
-        if (constantStrings[j].empty()) {
-          value = (*it++)->valueAt<StringView>(row);
-        } else {
+        if (!constantStrings[j].empty()) {
           value = StringView(constantStrings[j]);
+        } else {
+          // Skip NULL.
+          if ((*it)->isNullAt(row)) {
+            ++it;
+            continue;
+          }
+          value = (*it++)->valueAt<StringView>(row);
         }
         copyToBuffer(
             value,

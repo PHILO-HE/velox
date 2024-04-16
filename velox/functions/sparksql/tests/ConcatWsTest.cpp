@@ -69,14 +69,12 @@ class ConcatWsTest : public SparkFunctionBaseTest {
       std::string output;
       for (int i = 0; i < inputs.size(); i++) {
         auto value = inputs[i];
-        if (!value.empty()) {
-          if (isFirst) {
-            isFirst = false;
-          } else {
-            output += separator;
-          }
-          output += value;
+        if (isFirst) {
+          isFirst = false;
+        } else {
+          output += separator;
         }
+        output += value;
       }
       return output;
     };
@@ -149,36 +147,25 @@ TEST_F(ConcatWsTest, mixedConstantAndNonconstantStringArgs) {
   // Test with consecutive constant inputs.
   auto result = evaluate<SimpleVector<StringView>>(
       "concat_ws('--', c0, c1, 'foo', 'bar')", data);
+
   auto expected = makeFlatVector<StringView>(1'000, [&](auto row) {
-    value = "";
     const std::string& s0 = c0[row].str();
     const std::string& s1 = c1[row].str();
-
-    if (s0.empty() && s1.empty()) {
-      value = "foo--bar";
-    } else if (!s0.empty() && !s1.empty()) {
-      value = s0 + "--" + s1 + "--foo--bar";
-    } else {
-      value = s0 + s1 + "--foo--bar";
-    }
+    value = s0 + "--" + s1 + "--foo--bar";
     return StringView(value);
   });
   velox::test::assertEqualVectors(expected, result);
 
   // Test with non-ASCII characters.
   result = evaluate<SimpleVector<StringView>>(
-      "concat_ws('$*@', 'aaa', '测试', c0, 'eee', 'ddd', c1, '\u82f9\u679c', 'fff')",
+      "concat_ws('$*@', 'aaa', 'åæ', c0, 'eee', 'ddd', c1, '\u82f9\u679c', 'fff')",
       data);
   expected = makeFlatVector<StringView>(1'000, [&](auto row) {
-    value = "";
     std::string delim = "$*@";
-    const std::string& s0 =
-        c0[row].str().empty() ? c0[row].str() : delim + c0[row].str();
-    const std::string& s1 =
-        c1[row].str().empty() ? c1[row].str() : delim + c1[row].str();
 
-    value = "aaa" + delim + "测试" + s0 + delim + "eee" + delim + "ddd" + s1 +
-        delim + "\u82f9\u679c" + delim + "fff";
+    value = "aaa" + delim + "åæ" + delim + c0[row].str() + delim + "eee" +
+        delim + "ddd" + delim + c1[row].str() + delim + "\u82f9\u679c" + delim +
+        "fff";
     return StringView(value);
   });
   velox::test::assertEqualVectors(expected, result);
@@ -195,25 +182,25 @@ TEST_F(ConcatWsTest, arrayArgs) {
 
   // One array arg.
   auto result = evaluate<SimpleVector<StringView>>(
-      "concat_ws('----', c0)", makeRowVector({arrayVector}));
+      "concat_ws('--', c0)", makeRowVector({arrayVector}));
   auto expected1 = makeFlatVector<StringView>({
-      "red----blue",
-      "blue----yellow----orange",
+      "red--blue",
+      "blue--yellow--orange",
       "",
       "",
-      "red----purple----green",
+      "red--purple--green",
   });
   velox::test::assertEqualVectors(expected1, result);
 
   // Two array args.
   result = evaluate<SimpleVector<StringView>>(
-      "concat_ws('----', c0, c1)", makeRowVector({arrayVector, arrayVector}));
+      "concat_ws('--', c0, c1)", makeRowVector({arrayVector, arrayVector}));
   auto expected2 = makeFlatVector<StringView>({
-      "red----blue----red----blue",
-      "blue----yellow----orange----blue----yellow----orange",
+      "red--blue--red--blue",
+      "blue--yellow--orange--blue--yellow--orange",
       "",
       "",
-      "red----purple----green----red----purple----green",
+      "red--purple--green--red--purple--green",
   });
   velox::test::assertEqualVectors(expected2, result);
 }
@@ -225,17 +212,22 @@ TEST_F(ConcatWsTest, mixedStringAndArrayArgs) {
       {},
       {std::nullopt},
       {"red", "purple", "green"},
+      {""},
+      {"", "green"},
   });
 
   auto result = evaluate<SimpleVector<StringView>>(
-      "concat_ws('----', c0, 'foo', c1, 'bar', 'end')",
+      "concat_ws('--', c0, 'foo', c1, 'bar', 'end', '')",
       makeRowVector({arrayVector, arrayVector}));
+  // Empty string & its neighboring inputs are also separated with separator.
   auto expected = makeFlatVector<StringView>({
-      "red----blue----foo----red----blue----bar----end",
-      "blue----yellow----orange----foo----blue----yellow----orange----bar----end",
-      "foo----bar----end",
-      "foo----bar----end",
-      "red----purple----green----foo----red----purple----green----bar----end",
+      "red--blue--foo--red--blue--bar--end--",
+      "blue--yellow--orange--foo--blue--yellow--orange--bar--end--",
+      "foo--bar--end--",
+      "foo--bar--end--",
+      "red--purple--green--foo--red--purple--green--bar--end--",
+      "--foo----bar--end--",
+      "--green--foo----green--bar--end--",
   });
   velox::test::assertEqualVectors(expected, result);
 }
