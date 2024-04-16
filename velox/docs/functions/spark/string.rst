@@ -25,10 +25,9 @@ Unless specified otherwise, all functions return NULL if at least one of the arg
    Returns the concatenation for ``string`` and all elements in ``array<string>``, separated
    by ``separator``. The type of ``separator`` is VARCHAR . It can take variable number of
    remaining arguments, where ``string`` & ``array<string>`` can be used in combination. NULL
-   element is skipped in the concatenation. Empty string & its neighboring inputs are also
-   separated with separator. If ``separator`` is NULL, returns NULL, regardless of the following
-   inputs. For non-NULL ``separator``, if no remaining input or all remaining inputs are NULL,
-   returns an empty string. ::
+   element is skipped in the concatenation. If ``separator`` is NULL, returns NULL, regardless
+   of the followinginputs. For non-NULL ``separator``, if no remaining input or all remaining
+   inputs are NULL, returns an empty string. ::
 
         SELECT concat_ws('~', 'a', 'b', 'c'); -- 'a~b~c'
         SELECT concat_ws('~', ['a', 'b', 'c'], ['d']); -- 'a~b~c~d'

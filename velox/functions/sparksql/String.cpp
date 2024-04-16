@@ -274,7 +274,7 @@ class ConcatWs : public exec::VectorFunction {
     // Allocate a string buffer.
     auto rawBuffer =
         flatResult.getRawStringBufferWithSpace(totalResultBytes, true);
-    rows.applyToSelected([&](int row) {
+    rows.applyToSelected([&](auto row) {
       const char* start = rawBuffer;
       auto isFirst = true;
       // For array arg.
@@ -366,20 +366,20 @@ class ConcatWs : public exec::VectorFunction {
     auto numArgs = args.size();
     // If separator is NULL, result is NULL.
     if (args[0]->isNullAt(0)) {
-      rows.applyToSelected([&](int row) { result->setNull(row, true); });
+      rows.applyToSelected([&](auto row) { result->setNull(row, true); });
       return;
     }
     // If only separator (not a NULL) is provided, result is an empty string.
     if (numArgs == 1) {
       rows.applyToSelected(
-          [&](int row) { flatResult->setNoCopy(row, StringView("")); });
+          [&](auto row) { flatResult->setNoCopy(row, StringView("")); });
       return;
     }
     doApply(rows, args, context, *flatResult);
   }
 
  private:
-  // If has no value, the separator is non-constant.
+  // For holding constant separator.
   const std::optional<std::string> separator_;
 };
 
