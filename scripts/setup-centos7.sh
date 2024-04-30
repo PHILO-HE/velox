@@ -22,6 +22,7 @@ DEPENDENCY_DIR=${DEPENDENCY_DIR:-/tmp/velox-deps}
 CPU_TARGET="${CPU_TARGET:-avx}"
 NPROC=$(getconf _NPROCESSORS_ONLN)
 FMT_VERSION=10.1.1
+BUILD_DUCKDB="${BUILD_DUCKDB:-true}"
 export CFLAGS=$(get_cxx_flags $CPU_TARGET)  # Used by LZO.
 export CXXFLAGS=$CFLAGS  # Used by boost.
 export CPPFLAGS=$CFLAGS  # Used by LZO.
@@ -213,6 +214,17 @@ function install_fmt {
   cmake_install fmt -DFMT_TEST=OFF
 }
 
+function install_duckdb {
+  if $BUILD_DUCKDB ; then
+    echo 'Building DuckDB'
+    wget_and_untar https://github.com/duckdb/duckdb/archive/refs/tags/v0.8.1.tar.gz duckdb
+    (
+      cd duckdb
+      cmake_install -DBUILD_UNITTESTS=OFF -DENABLE_SANITIZER=OFF -DENABLE_UBSAN=OFF -DBUILD_SHELL=OFF -DEXPORT_DLL_SYMBOLS=OFF -DCMAKE_BUILD_TYPE=Release
+    )
+  fi
+}
+
 function install_prerequisites {
   run_and_time install_lzo
   run_and_time install_boost
@@ -229,6 +241,7 @@ function install_velox_deps {
   run_and_time install_fmt
   run_and_time install_folly
   run_and_time install_conda
+  run_and_time install_duckdb
 }
 
 $SUDO dnf makecache
