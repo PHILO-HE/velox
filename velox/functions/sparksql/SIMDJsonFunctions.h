@@ -15,6 +15,7 @@
  */
 
 #include "velox/functions/prestosql/SIMDJsonFunctions.h"
+#include "velox/functions/prestosql/json/SIMDJsonUtil.h"
 
 using namespace simdjson;
 
@@ -155,13 +156,17 @@ struct SIMDGetJsonObjectFunction {
       out_type<Varchar>& result,
       const arg_type<Varchar>& json,
       const arg_type<Varchar>& jsonPath) {
-    ParserContext ctx(json.data(), json.size());
+    simdjson::ondemand::document jsonDoc;
+    simdjson::padded_string paddedJson(json.data(), json.size());
+    if (simdjsonParse(paddedJson).get(jsonDoc)) {
+      return false;
+    }
+
     try {
-      ctx.parseDocument();
       simdjson_result<ondemand::value> rawResult =
           formattedJsonPath_.has_value()
-          ? ctx.jsonDoc.at_pointer(formattedJsonPath_.value().data())
-          : ctx.jsonDoc.at_pointer(getFormattedJsonPath(jsonPath).data());
+          ? jsonDoc.at_pointer(formattedJsonPath_.value().data())
+          : jsonDoc.at_pointer(getFormattedJsonPath(jsonPath).data());
       // Field not found.
       if (rawResult.error() == NO_SUCH_FIELD) {
         return false;
@@ -175,7 +180,7 @@ struct SIMDGetJsonObjectFunction {
     }
 
     const char* currentPos;
-    ctx.jsonDoc.current_location().get(currentPos);
+    jsonDoc.current_location().get(currentPos);
     return isValidEndingCharacter(currentPos);
   }
 };
