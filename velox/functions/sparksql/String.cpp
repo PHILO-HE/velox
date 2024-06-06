@@ -432,7 +432,7 @@ std::vector<std::shared_ptr<exec::FunctionSignature>> concatWsSignatures() {
           // varchar, [varchar], [array(varchar)], ... -> varchar.
           exec::FunctionSignatureBuilder()
               .returnType("varchar")
-              .constantArgumentType("varchar")
+              .argumentType("varchar")
               .argumentType("any")
               .variableArity()
               .build()};
@@ -457,11 +457,11 @@ std::shared_ptr<exec::VectorFunction> makeConcatWs(
         arg.type->toString());
   }
 
-  BaseVector* constantPattern = inputArgs[0].constantValue.get();
+  BaseVector* constantSeparator = inputArgs[0].constantValue.get();
   std::optional<std::string> separator = std::nullopt;
-  if (constantPattern != nullptr) {
+  if (constantSeparator != nullptr) {
     separator =
-        constantPattern->as<ConstantVector<StringView>>()->valueAt(0).str();
+        constantSeparator->as<ConstantVector<StringView>>()->valueAt(0).str();
   }
 
   return std::make_shared<ConcatWs>(separator);
