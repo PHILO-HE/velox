@@ -108,6 +108,19 @@ class ConcatWs : public exec::VectorFunction {
   explicit ConcatWs(const std::optional<std::string>& separator)
       : separator_(separator) {}
 
+  static void getArrayAccesser(exec::EvalCtx& context, DecodedVector& arrayDecoded, const vector_size_t* rawSizes, const vector_size_t* indices, const vector_size_t* rawOffsets, DecodedVector* elementsDecoded) {
+    auto baseArray = arrayDecoded.base()->as<ArrayVector>();
+    rawSizes = baseArray->rawSizes();
+    rawOffsets = baseArray->rawOffsets();
+    indices = arrayDecoded.indices();
+    auto elements = baseArray->elements();
+    exec::LocalSelectivityVector nestedRows(context, elements->size());
+    nestedRows.get()->setAll();
+    exec::LocalDecodedVector elementsHolder(
+            context, *elements, *nestedRows.get());
+    elementsDecoded = elementsHolder.get();
+  }
+
   // Calculate the total number of bytes in the result.
   size_t calculateTotalResultBytes(
       const SelectivityVector& rows,
