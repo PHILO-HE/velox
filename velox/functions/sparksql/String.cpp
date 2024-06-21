@@ -116,28 +116,36 @@ class ConcatWs : public exec::VectorFunction {
       const std::vector<std::string>& constantStrings,
       const std::vector<exec::LocalDecodedVector>& decodedStringArgs,
       const exec::LocalDecodedVector& decodedSeparator) const {
-    size_t totalResultBytes = 0;
-    rows.applyToSelected([&](auto row) {
-      int32_t allElements = 0;
-      // Calculate size for array args.
-      for (int i = 0; i < decodedArrays.size(); i++) {
-        DecodedVector& arrayDecoded = *decodedArrays[i].get();
-        auto baseArray = arrayDecoded.base()->as<ArrayVector>();
-        auto rawSizes = baseArray->rawSizes();
-        auto rawOffsets = baseArray->rawOffsets();
-        auto indices = arrayDecoded.indices();
-        auto elements = baseArray->elements();
-        exec::LocalSelectivityVector nestedRows(context, elements->size());
+    auto arrayArgNum = decodedArrays.size();
+    std::vector<const ArrayVector*> arrayVectors;
+    std::vector<DecodedVector*> elementsDecodedVectors;
+    for (auto i = 0; i < arrayArgNum; ++i) {
+      auto arrayVector = decodedArrays[i].get()->base()->as<ArrayVector>();
+      arrayVectors.push_back(arrayVector);
+      auto elements = arrayVector->elements();
+      exec::LocalSelectivityVector nestedRows(context, elements->size());
         nestedRows.get()->setAll();
         exec::LocalDecodedVector elementsHolder(
             context, *elements, *nestedRows.get());
-        auto& elementsDecoded = *elementsHolder.get();
+      elementsDecodedVectors.push_back(elementsHolder.get());
+    }
+
+    size_t totalResultBytes = 0;
+    rows.applyToSelected([&](auto row) {
+      int32_t allElements = 0;
+      // Calculate size for array columns data.
+      for (int i = 0; i < arrayArgNum; i++) {
+        auto arrayVector = arrayVectors[i];
+        auto rawSizes = arrayVector->rawSizes();
+        auto rawOffsets = arrayVector->rawOffsets();
+        auto indices = decodedArrays[i].get()->indices();
+        auto elementsDecoded = elementsDecodedVectors[i];
 
         auto size = rawSizes[indices[row]];
         auto offset = rawOffsets[indices[row]];
         for (int j = 0; j < size; ++j) {
-          if (!elementsDecoded.isNullAt(offset + j)) {
-            auto element = elementsDecoded.valueAt<StringView>(offset + j);
+          if (!elementsDecoded->isNullAt(offset + j)) {
+            auto element = elementsDecoded->valueAt<StringView>(offset + j);
             // No matter empty string or not.
             allElements++;
             totalResultBytes += element.size();
@@ -271,6 +279,18 @@ class ConcatWs : public exec::VectorFunction {
         decodedStringArgs,
         decodedSeparator);
 
+    std::vector<const ArrayVector*> arrayVectors;
+    std::vector<DecodedVector*> elementsDecodedVectors;
+    for (auto i = 0; i < decodedArrays.size(); ++i) {
+      auto arrayVector = decodedArrays[i].get()->base()->as<ArrayVector>();
+      arrayVectors.push_back(arrayVector);
+      auto elements = arrayVector->elements();
+      exec::LocalSelectivityVector nestedRows(context, elements->size());
+        nestedRows.get()->setAll();
+        exec::LocalDecodedVector elementsHolder(
+            context, *elements, *nestedRows.get());
+      elementsDecodedVectors.push_back(elementsHolder.get());
+    }
     // Allocate a string buffer.
     auto rawBuffer =
         flatResult.getRawStringBufferWithSpace(totalResultBytes, true);
@@ -301,23 +321,17 @@ class ConcatWs : public exec::VectorFunction {
 
       for (auto itArgs = args.begin() + 1; itArgs != args.end(); ++itArgs) {
         if ((*itArgs)->typeKind() == TypeKind::ARRAY) {
-          DecodedVector& arrayDecoded = *decodedArrays[i].get();
-          auto baseArray = arrayDecoded.base()->as<ArrayVector>();
-          auto rawSizes = baseArray->rawSizes();
-          auto rawOffsets = baseArray->rawOffsets();
-          auto indices = arrayDecoded.indices();
-          auto elements = baseArray->elements();
-          exec::LocalSelectivityVector nestedRows(context, elements->size());
-          nestedRows.get()->setAll();
-          exec::LocalDecodedVector elementsHolder(
-              context, *elements, *nestedRows.get());
-          auto& elementsDecoded = *elementsHolder.get();
+          auto arrayVector = arrayVectors[i];
+          auto rawSizes = arrayVector->rawSizes();
+          auto rawOffsets = arrayVector->rawOffsets();
+          auto indices = decodedArrays[i].get()->indices();
+          auto elementsDecoded = elementsDecodedVectors[i];
 
           auto size = rawSizes[indices[row]];
           auto offset = rawOffsets[indices[row]];
           for (int k = 0; k < size; ++k) {
-            if (!elementsDecoded.isNullAt(offset + k)) {
-              auto element = elementsDecoded.valueAt<StringView>(offset + k);
+            if (!elementsDecoded->isNullAt(offset + k)) {
+              auto element = elementsDecoded->valueAt<StringView>(offset + k);
               copyToBuffer(
                   element,
                   separator_.has_value()
