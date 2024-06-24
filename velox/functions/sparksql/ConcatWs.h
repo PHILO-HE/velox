@@ -22,7 +22,6 @@ namespace facebook::velox::functions::sparksql {
 
 class ConcatWsCallToSpecialForm : public exec::FunctionCallToSpecialForm {
  public:
-  // Throws not supported exception.
   TypePtr resolveType(const std::vector<TypePtr>& argTypes) override;
 
   exec::ExprPtr constructSpecialForm(
