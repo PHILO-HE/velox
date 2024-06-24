@@ -234,8 +234,8 @@ TEST_F(ConcatWsTest, mixedStringAndArrayArgs) {
 }
 
 TEST_F(ConcatWsTest, nonconstantSeparator) {
-  auto separatorVector =
-      makeNullableFlatVector<StringView>({"##", "--", "~~", "**", std::nullopt});
+  auto separatorVector = makeNullableFlatVector<StringView>(
+      {"##", "--", "~~", "**", std::nullopt});
   auto arrayVector = makeNullableArrayVector<StringView>({
       {"red", "blue"},
       {"blue", std::nullopt, "yellow", std::nullopt, "orange"},
@@ -257,8 +257,8 @@ TEST_F(ConcatWsTest, nonconstantSeparator) {
 }
 
 TEST_F(ConcatWsTest, separatorOnly) {
-  auto separatorVector =
-      makeNullableFlatVector<StringView>({"##", std::nullopt, "~~", "**", std::nullopt});
+  auto separatorVector = makeNullableFlatVector<StringView>(
+      {"##", std::nullopt, "~~", "**", std::nullopt});
   auto result = evaluate<SimpleVector<StringView>>(
       "concat_ws(c0)", makeRowVector({separatorVector}));
   auto expected = makeNullableFlatVector<StringView>({

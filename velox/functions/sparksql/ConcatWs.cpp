@@ -289,9 +289,8 @@ class ConcatWs : public exec::VectorFunction {
         }
         copyToBuffer(
             value,
-            isConstantSeparator()
-                ? StringView(separator_.value())
-                : decodedSeparator->valueAt<StringView>(row));
+            isConstantSeparator() ? StringView(separator_.value())
+                                  : decodedSeparator->valueAt<StringView>(row));
         j++;
       }
       flatResult.setNoCopy(row, StringView(start, rawBuffer - start));
@@ -311,7 +310,8 @@ class ConcatWs : public exec::VectorFunction {
     if (isConstantSeparator()) {
       auto constant = args[0]->as<ConstantVector<StringView>>();
       if (constant->isNullAt(0)) {
-        auto localResult = BaseVector::createNullConstant(outputType, rows.end(), context.pool());
+        auto localResult = BaseVector::createNullConstant(
+            outputType, rows.end(), context.pool());
         context.moveOrCopyResult(localResult, rows, result);
         // rows.applyToSelected([&](auto row) { result->setNull(row, true); });
         return;
@@ -326,13 +326,12 @@ class ConcatWs : public exec::VectorFunction {
         rows.applyToSelected(
             [&](auto row) { flatResult->setNoCopy(row, StringView("")); });
       } else {
-        rows.applyToSelected(
-            [&](auto row) {
-                if (decodedSeparator->isNullAt(row)) {
-                  result->setNull(row, true);
-                } else {
-                  flatResult->setNoCopy(row, StringView(""));
-                }
+        rows.applyToSelected([&](auto row) {
+          if (decodedSeparator->isNullAt(row)) {
+            result->setNull(row, true);
+          } else {
+            flatResult->setNoCopy(row, StringView(""));
+          }
         });
       }
       return;
@@ -345,23 +344,26 @@ class ConcatWs : public exec::VectorFunction {
   const std::optional<std::string> separator_;
 };
 
-TypePtr ConcatWsCallToSpecialForm::resolveType(const std::vector<TypePtr>& /*argTypes*/) {
-    return VARCHAR();
+TypePtr ConcatWsCallToSpecialForm::resolveType(
+    const std::vector<TypePtr>& /*argTypes*/) {
+  return VARCHAR();
 }
 
 exec::ExprPtr ConcatWsCallToSpecialForm::constructSpecialForm(
-      const TypePtr& type,
-      std::vector<exec::ExprPtr>&& args,
-      bool trackCpuUsage,
-      const core::QueryConfig& config) {
+    const TypePtr& type,
+    std::vector<exec::ExprPtr>&& args,
+    bool trackCpuUsage,
+    const core::QueryConfig& config) {
   auto numArgs = args.size();
   VELOX_USER_CHECK_GE(
       numArgs,
       1,
       "concat_ws requires one arguments at least, but got {}.",
       numArgs);
-  VELOX_USER_CHECK(args[0]->type()->isVarchar(), "The first argument of concat_ws must be a varchar."); 
-  for (size_t i = 1; i < args.size(); i++){  
+  VELOX_USER_CHECK(
+      args[0]->type()->isVarchar(),
+      "The first argument of concat_ws must be a varchar.");
+  for (size_t i = 1; i < args.size(); i++) {
     VELOX_USER_CHECK(
         args[i]->type()->isVarchar() ||
             (args[i]->type()->isArray() &&
@@ -374,7 +376,10 @@ exec::ExprPtr ConcatWsCallToSpecialForm::constructSpecialForm(
   auto constantExpr = std::dynamic_pointer_cast<exec::ConstantExpr>(args[0]);
 
   if (constantExpr != nullptr) {
-    separator = constantExpr->value()->asUnchecked<ConstantVector<StringView>>()->valueAt(0).str();
+    separator = constantExpr->value()
+                    ->asUnchecked<ConstantVector<StringView>>()
+                    ->valueAt(0)
+                    .str();
   }
   auto concatWsFunction = std::make_shared<ConcatWs>(separator);
   return std::make_shared<exec::Expr>(
