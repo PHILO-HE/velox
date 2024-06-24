@@ -18,6 +18,8 @@
 #include "velox/expression/VectorFunction.h"
 
 namespace facebook::velox::functions::sparksql {
+
+namespace {
 class ConcatWs : public exec::VectorFunction {
  public:
   explicit ConcatWs(const std::optional<std::string>& separator)
@@ -343,6 +345,7 @@ class ConcatWs : public exec::VectorFunction {
   // For holding constant separator.
   const std::optional<std::string> separator_;
 };
+} // namespace
 
 TypePtr ConcatWsCallToSpecialForm::resolveType(
     const std::vector<TypePtr>& /*argTypes*/) {
