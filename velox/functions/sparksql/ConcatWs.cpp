@@ -312,51 +312,8 @@ class ConcatWs : public exec::VectorFunction {
   const std::optional<std::string> separator_;
 };
 
-// std::vector<std::shared_ptr<exec::FunctionSignature>> concatWsSignatures() {
-//   return {// The second and folowing arguments are varchar or array(varchar).
-//           // Use "any" to allow the mixed using of these two types. The
-//           // argument type will be checked in makeConcatWs.
-//           //
-//           // varchar, [varchar], [array(varchar)], ... -> varchar.
-//           exec::FunctionSignatureBuilder()
-//               .returnType("varchar")
-//               .argumentType("varchar")
-//               .argumentType("any")
-//               .variableArity()
-//               .build()};
-// }
-
-// std::shared_ptr<exec::VectorFunction> makeConcatWs(
-//     const std::string& name,
-//     const std::vector<exec::VectorFunctionArg>& inputArgs,
-//     const core::QueryConfig& /*config*/) {
-//   auto numArgs = inputArgs.size();
-//   VELOX_USER_CHECK_GE(
-//       numArgs,
-//       1,
-//       "concat_ws requires one arguments at least, but got {}.",
-//       numArgs);
-//   for (const auto& arg : inputArgs) {
-//     VELOX_USER_CHECK(
-//         arg.type->isVarchar() ||
-//             (arg.type->isArray() &&
-//              arg.type->asArray().elementType()->isVarchar()),
-//         "concat_ws requires varchar or array(varchar) arguments, but got {}.",
-//         arg.type->toString());
-//   }
-
-//   BaseVector* constantSeparator = inputArgs[0].constantValue.get();
-//   std::optional<std::string> separator = std::nullopt;
-//   if (constantSeparator != nullptr) {
-//     separator =
-//         constantSeparator->as<ConstantVector<StringView>>()->valueAt(0).str();
-//   }
-
-//   return std::make_shared<ConcatWs>(separator);
-// }
-
 TypePtr ConcatWsCallToSpecialForm::resolveType(const std::vector<TypePtr>& /*argTypes*/) {
-    VELOX_FAIL("ConcatWs function does not support type resolution.");
+    return VARCHAR();
 }
 
 exec::ExprPtr ConcatWsCallToSpecialForm::constructSpecialForm(
@@ -379,15 +336,12 @@ exec::ExprPtr ConcatWsCallToSpecialForm::constructSpecialForm(
         arg->type()->toString());
   }
 
-//   BaseVector* constantSeparator = args[0]->constantValue.get();
-  auto constantExpr = std::dynamic_pointer_cast<exec::ConstantExpr>(args[0]);
   std::optional<std::string> separator = std::nullopt;
-  if (constantExpr != nullptr) {
-    // separator = constantExpr->value()->asUnchecked<ConstantVector<StringView>>()->valueAt(0).str();
-    separator =
-        constantExpr->as<ConstantVector<StringView>>()->valueAt(0).str();
-  }
+  auto constantExpr = std::dynamic_pointer_cast<exec::ConstantExpr>(args[0]);
 
+  if (constantExpr != nullptr) {
+    separator = constantExpr->value()->asUnchecked<ConstantVector<StringView>>()->valueAt(0).str();
+  }
   auto concatWsFunction = std::make_shared<ConcatWs>(separator);
   return std::make_shared<exec::Expr>(
       type,
