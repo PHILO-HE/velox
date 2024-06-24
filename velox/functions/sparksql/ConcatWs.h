@@ -13,16 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #pragma once
 
-#include <string>
-#include "velox/expression/VectorFunction.h"
+#include "velox/expression/FunctionCallToSpecialForm.h"
 
 namespace facebook::velox::functions::sparksql {
-std::vector<std::shared_ptr<exec::FunctionSignature>> concatWsSignatures();
 
-std::shared_ptr<exec::VectorFunction> makeConcatWs(
-    const std::string& name,
-    const std::vector<exec::VectorFunctionArg>& inputArgs,
-    const core::QueryConfig& config);
+class ConcatWsCallToSpecialForm : public exec::FunctionCallToSpecialForm {
+ public:
+  // Throws not supported exception.
+  TypePtr resolveType(const std::vector<TypePtr>& argTypes) override;
+
+  exec::ExprPtr constructSpecialForm(
+      const TypePtr& type,
+      std::vector<exec::ExprPtr>&& args,
+      bool trackCpuUsage,
+      const core::QueryConfig& config) override;
+
+  static constexpr const char* kConcatWs = "concat_ws";
+};
 } // namespace facebook::velox::functions::sparksql
