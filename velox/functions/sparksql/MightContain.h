@@ -28,8 +28,8 @@ struct BloomFilterMightContainFunction {
   void initialize(
       const std::vector<TypePtr>& /*inputTypes*/,
       const core::QueryConfig&,
-      const accessor_arg_type<Varbinary>* serialized,
-      const accessor_arg_type<int64_t>*) {
+      const optional_arg_type<Varbinary>* serialized,
+      const optional_arg_type<int64_t>*) {
     if (serialized != nullptr) {
       bloomFilter_.merge(serialized->str().c_str());
     }

@@ -38,7 +38,7 @@
       typename __Velox_ExecParams::template resolver<TArgs>::out_type>; \
                                                                         \
   template <typename TArgs>                                             \
-  using accessor_arg_type = facebook::velox::exec::OptionalAccessor<    \
+  using optional_arg_type = facebook::velox::exec::OptionalAccessor<    \
       typename __Velox_ExecParams::template resolver<TArgs>::in_type>;  \
                                                                         \
   DECLARE_CONDITIONAL_TYPE_NAME(                                        \
