@@ -26,6 +26,9 @@ if(POLICY CMP0135)
   set(CMAKE_POLICY_DEFAULT_CMP0135 NEW)
 endif()
 
+message(STATUS "before project(velox)")
+list(APPEND VCPKG_MANIFEST_FEATURES "velox-s3")
+
 # Set the project name.
 project(velox)
 
