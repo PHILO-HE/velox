@@ -399,10 +399,12 @@ void WindowPartition::updateKRangeFrameBounds(
       // [0, currentRow] are examined. For following bounds, rows between
       // [currentRow, numRows()) are checked.
       if (isPreceding) {
-        start = lastFoundIndex;
+        start = lastFoundIndex == -1 ? 0 : lastFoundIndex;
         end = currentRow + 1;
       } else {
-        start = lastFoundIndex == -1 ? currentRow : lastFoundIndex;
+        start = lastFoundIndex == -1
+            ? currentRow
+            : std::min(lastFoundIndex, (vector_size_t)partition_.size() - 1);
         end = partition_.size();
       }
       rawFrameBounds[i] = searchFrameValue(
