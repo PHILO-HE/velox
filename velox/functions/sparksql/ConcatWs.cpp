@@ -129,7 +129,7 @@ class ConcatWs : public exec::VectorFunction {
         continue;
       }
       if (args[i] && args[i]->as<ConstantVector<StringView>>() &&
-          !args[i]->as<ConstantVector<StringView>>()->isNullAt(0)) {
+          !args[i]->isNullAt(0)) {
         std::ostringstream out;
         out << args[i]->as<ConstantVector<StringView>>()->valueAt(0);
         column_index_t j = i + 1;
@@ -137,7 +137,7 @@ class ConcatWs : public exec::VectorFunction {
         for (; j < args.size(); ++j) {
           if (!args[j] || args[j]->typeKind() == TypeKind::ARRAY ||
               !args[j]->as<ConstantVector<StringView>>() ||
-              args[j]->as<ConstantVector<StringView>>()->isNullAt(0)) {
+              args[j]->isNullAt(0)) {
             break;
           }
           out << separator_.value()
@@ -310,8 +310,7 @@ class ConcatWs : public exec::VectorFunction {
     auto numArgs = args.size();
     // If separator is NULL, result is NULL.
     if (isConstantSeparator()) {
-      auto constant = args[0]->as<ConstantVector<StringView>>();
-      if (constant->isNullAt(0)) {
+      if (args[0]->isNullAt(0)) {
         auto localResult = BaseVector::createNullConstant(
             outputType, rows.end(), context.pool());
         context.moveOrCopyResult(localResult, rows, result);
