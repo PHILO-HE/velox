@@ -61,13 +61,17 @@ class ConcatWs : public exec::VectorFunction {
       // Calculate size for array columns data.
       for (int i = 0; i < arrayArgNum; i++) {
         auto arrayVector = arrayVectors[i];
-        auto rawSizes = arrayVector->rawSizes();
-        auto rawOffsets = arrayVector->rawOffsets();
+        // auto rawSizes = arrayVector->rawSizes();
+        // auto rawOffsets = arrayVector->rawOffsets();
         auto indices = decodedArrays[i].get()->indices();
-        auto elementsDecoded = elementsDecodedVectors[i];
+        // auto elementsDecoded = elementsDecodedVectors[i];
+        SelectivityVector nestedRows(arrayVector->elements()->size());
+        DecodedVector elementsDecoded(arrayVector->elements(), nestedRows);
+        auto size = arrayVector->sizeAt(indices[row]);
+        auto offset = arrayVector->offsetAt(indices[row]);
 
-        auto size = rawSizes[indices[row]];
-        auto offset = rawOffsets[indices[row]];
+        // auto size = rawSizes[indices[row]];
+        // auto offset = rawOffsets[indices[row]];
         for (int j = 0; j < size; ++j) {
           if (!elementsDecoded->isNullAt(offset + j)) {
             auto element = elementsDecoded->valueAt<StringView>(offset + j);
@@ -256,13 +260,18 @@ class ConcatWs : public exec::VectorFunction {
       for (auto itArgs = args.begin() + 1; itArgs != args.end(); ++itArgs) {
         if ((*itArgs)->typeKind() == TypeKind::ARRAY) {
           auto arrayVector = arrayVectors[i];
-          auto rawSizes = arrayVector->rawSizes();
-          auto rawOffsets = arrayVector->rawOffsets();
+          // auto rawSizes = arrayVector->rawSizes();
+          // auto rawOffsets = arrayVector->rawOffsets();
           auto indices = decodedArrays[i].get()->indices();
-          auto elementsDecoded = elementsDecodedVectors[i];
+          // auto elementsDecoded = elementsDecodedVectors[i];
 
-          auto size = rawSizes[indices[row]];
-          auto offset = rawOffsets[indices[row]];
+          SelectivityVector nestedRows(arrayVector->elements()->size());
+          DecodedVector elementsDecoded(arrayVector->elements(), nestedRows);
+          auto size = arrayVector->sizeAt(indices[row]);
+          auto offset = arrayVector->offsetAt(indices[row]);
+
+          // auto size = rawSizes[indices[row]];
+          // auto offset = rawOffsets[indices[row]];
           for (int k = 0; k < size; ++k) {
             if (!elementsDecoded->isNullAt(offset + k)) {
               auto element = elementsDecoded->valueAt<StringView>(offset + k);
