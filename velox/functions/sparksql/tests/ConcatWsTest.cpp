@@ -121,6 +121,22 @@ TEST_F(ConcatWsTest, stringArgs) {
   }
 }
 
+TEST_F(ConcatWsTest, stringArgsWithNulls) {
+  auto input =
+      makeNullableFlatVector<StringView>({"", std::nullopt, "a", "*", "b"});
+
+  auto result = evaluate<SimpleVector<StringView>>(
+      "concat_ws('~','',c0,'x',NULL::VARCHAR)", makeRowVector({input}));
+  auto expected = makeNullableFlatVector<StringView>({
+      "~~x",
+      "~x",
+      "~a~x",
+      "~*~x",
+      "~b~x",
+  });
+  velox::test::assertEqualVectors(expected, result);
+}
+
 TEST_F(ConcatWsTest, mixedConstantAndNonconstantStringArgs) {
   size_t maxStringLength = 100;
   std::string value;
@@ -269,6 +285,14 @@ TEST_F(ConcatWsTest, separatorOnly) {
       std::nullopt,
   });
   velox::test::assertEqualVectors(expected, result);
+
+  // Uses constant separator.
+  auto dummyInput = makeRowVector(makeRowType({VARCHAR()}), 1);
+  result = evaluate<SimpleVector<StringView>>(
+      "concat_ws(NULL::VARCHAR)", dummyInput);
+  EXPECT_TRUE(result->isNullAt(0));
+  result = evaluate<SimpleVector<StringView>>("concat_ws('-')", dummyInput);
+  EXPECT_EQ(result->valueAt(0), "");
 }
 
 } // namespace

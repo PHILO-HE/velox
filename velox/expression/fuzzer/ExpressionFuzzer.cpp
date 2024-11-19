@@ -253,6 +253,17 @@ static const std::unordered_map<
             /// them to fuzzer instead of hard-coding signatures here.
             getSignaturesForCast(),
         },
+        {
+            "concat_ws",
+            std::vector<facebook::velox::exec::FunctionSignaturePtr>{
+                // Signature: concat_ws (separator, input,...) -> output:
+                // varchar, varchar, varchar,.. -> varchar
+                facebook::velox::exec::FunctionSignatureBuilder()
+                    .argumentType("varchar")
+                    .variableArity("varchar")
+                    .returnType("varchar")
+                    .build()},
+        },
 };
 
 static std::unordered_set<std::string> splitNames(const std::string& names) {

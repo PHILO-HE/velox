@@ -34,7 +34,7 @@ class ConcatWs : public exec::VectorFunction {
       const SelectivityVector& rows,
       exec::EvalCtx& context,
       std::vector<exec::LocalDecodedVector>& decodedArrays,
-      const std::vector<std::string>& constantStrings,
+      const std::vector<std::optional<std::string>>& constantStrings,
       const std::vector<exec::LocalDecodedVector>& decodedStringArgs,
       const exec::LocalDecodedVector& decodedSeparator) const {
     auto arrayArgNum = decodedArrays.size();
@@ -72,7 +72,7 @@ class ConcatWs : public exec::VectorFunction {
           if (!elementsDecoded->isNullAt(offset + j)) {
             auto element = elementsDecoded->valueAt<StringView>(offset + j);
             // No matter empty string or not.
-            allElements++;
+            ++allElements;
             totalResultBytes += element.size();
           }
         }
@@ -82,9 +82,12 @@ class ConcatWs : public exec::VectorFunction {
       auto it = decodedStringArgs.begin();
       for (int i = 0; i < constantStrings.size(); i++) {
         StringView value;
-        if (!constantStrings[i].empty()) {
-          value = StringView(constantStrings[i]);
+        if (constantStrings[i].has_value()) {
+          value = StringView(*constantStrings[i]);
         } else {
+          VELOX_CHECK(
+              it < decodedStringArgs.end(),
+              "Unexpected end when iterating over decodedStringArgs.");
           // Skip NULL.
           if ((*it)->isNullAt(row)) {
             ++it;
@@ -114,7 +117,7 @@ class ConcatWs : public exec::VectorFunction {
       const exec::EvalCtx& context,
       std::vector<exec::LocalDecodedVector>& decodedArrays,
       std::vector<column_index_t>& argMapping,
-      std::vector<std::string>& constantStrings,
+      std::vector<std::optional<std::string>>& constantStrings,
       std::vector<exec::LocalDecodedVector>& decodedStringArgs) const {
     for (auto i = 1; i < args.size(); ++i) {
       if (args[i] && args[i]->typeKind() == TypeKind::ARRAY) {
@@ -125,7 +128,7 @@ class ConcatWs : public exec::VectorFunction {
       argMapping.push_back(i);
       if (!isConstantSeparator()) {
         // Cannot concat consecutive constant string args in advance.
-        constantStrings.push_back("");
+        constantStrings.push_back(std::nullopt);
         continue;
       }
       if (args[i] && args[i]->as<ConstantVector<StringView>>() &&
@@ -146,14 +149,14 @@ class ConcatWs : public exec::VectorFunction {
         constantStrings.emplace_back(out.str());
         i = j - 1;
       } else {
-        constantStrings.push_back("");
+        constantStrings.push_back(std::nullopt);
       }
     }
 
     // Number of string columns after combined consecutive constant ones.
     auto numStringCols = constantStrings.size();
     for (auto i = 0; i < numStringCols; ++i) {
-      if (constantStrings[i].empty()) {
+      if (!constantStrings[i].has_value()) {
         auto index = argMapping[i];
         decodedStringArgs.emplace_back(context, *args[index], rows);
       }
@@ -172,7 +175,7 @@ class ConcatWs : public exec::VectorFunction {
       VectorPtr& result) const {
     auto& flatResult = *result->asFlatVector<StringView>();
     std::vector<column_index_t> argMapping;
-    std::vector<std::string> constantStrings;
+    std::vector<std::optional<std::string>> constantStrings;
     auto numArgs = args.size();
     argMapping.reserve(numArgs - 1);
     // Save intermediate result for consecutive constant string args.
@@ -270,7 +273,7 @@ class ConcatWs : public exec::VectorFunction {
                       : decodedSeparator->valueAt<StringView>(row));
             }
           }
-          i++;
+          ++i;
           continue;
         }
 
@@ -279,12 +282,16 @@ class ConcatWs : public exec::VectorFunction {
         }
 
         StringView value;
-        if (!constantStrings[j].empty()) {
-          value = StringView(constantStrings[j]);
+        if (constantStrings[j].has_value()) {
+          value = StringView(*constantStrings[j]);
         } else {
+          VELOX_CHECK(
+              it < decodedStringArgs.end(),
+              "Unexpected end when iterating over decodedStringArgs.");
           // Skip NULL.
           if ((*it)->isNullAt(row)) {
             ++it;
+            ++j;
             continue;
           }
           value = (*it++)->valueAt<StringView>(row);
@@ -293,7 +300,7 @@ class ConcatWs : public exec::VectorFunction {
             value,
             isConstantSeparator() ? StringView(separator_.value())
                                   : decodedSeparator->valueAt<StringView>(row));
-        j++;
+        ++j;
       }
       flatResult.setNoCopy(row, StringView(start, rawBuffer - start));
     });

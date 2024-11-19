@@ -71,11 +71,6 @@ int main(int argc, char** argv) {
       // timestamp_millis(bigint) can generate timestamps out of the supported
       // range that make other functions throw VeloxRuntimeErrors.
       "timestamp_millis(bigint) -> timestamp",
-      // Skip concat_ws due to the below issue:
-      // We use "any" type in its signature to allow mixed
-      // using of VARCHAR & ARRAY<VARCHAR>. But the fuzzer
-      // couldn't generate correct expressions for it.
-      "concat_ws",
   };
 
   // Required by spark_partition_id function.
