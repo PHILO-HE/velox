@@ -34,6 +34,7 @@
 #include "velox/functions/sparksql/ArrayMinMaxFunction.h"
 #include "velox/functions/sparksql/ArraySort.h"
 #include "velox/functions/sparksql/Bitwise.h"
+#include "velox/functions/sparksql/ConcatWs.h"
 #include "velox/functions/sparksql/DateTimeFunctions.h"
 #include "velox/functions/sparksql/Hash.h"
 #include "velox/functions/sparksql/In.h"
@@ -153,6 +154,9 @@ void registerAllSpecialFormGeneralFunctions() {
   exec::registerFunctionCallToSpecialForm(
       AtLeastNNonNullsCallToSpecialForm::kAtLeastNNonNulls,
       std::make_unique<AtLeastNNonNullsCallToSpecialForm>());
+  registerFunctionCallToSpecialForm(
+      ConcatWsCallToSpecialForm::kConcatWs,
+      std::make_unique<ConcatWsCallToSpecialForm>());
 }
 
 namespace {
