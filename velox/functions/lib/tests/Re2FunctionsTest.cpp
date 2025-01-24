@@ -399,7 +399,7 @@ void testRe2ExtractEmptyNoMatch(F&& regexExtract) {
       regexExtract("rat cat\nbat dog", "ra(.)|blah(.)(.)", 2), "");
 }
 
-TEST_F(Re2FunctionsTest, regexExtract) {
+TEST_F(Re2FunctionsTest, regexExtractEmptyNoMatch) {
   testRe2ExtractEmptyNoMatch([&](std::optional<std::string> str,
                      std::optional<std::string> pattern,
                      std::optional<int> group) {
