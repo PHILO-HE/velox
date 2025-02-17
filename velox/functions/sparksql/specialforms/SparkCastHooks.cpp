@@ -31,20 +31,44 @@ SparkCastHooks::SparkCastHooks(const velox::core::QueryConfig& config)
 
 Expected<Timestamp> SparkCastHooks::castStringToTimestamp(
     const StringView& view) const {
-  auto conversionResult = util::fromTimestampString(
+  auto conversionResult = util::fromTimestampWithTimezoneString(
       view.data(), view.size(), util::TimestampParseMode::kSparkCast);
   if (conversionResult.hasError()) {
     return folly::makeUnexpected(conversionResult.error());
   }
+
   auto result = conversionResult.value();
   // If no timezone information is available in the input string, check if we
   // should understand it as being at the session timezone, and if so, convert
   // to GMT.
-  const auto sessionTzName = config_.sessionTimezone();
-  if (!sessionTzName.empty()) {
-    result.toGMT(*tz::locateZone(sessionTzName));
+  if (result.timeZone != nullptr) {
+    result.timestamp.toGMT(*result.timeZone);
+  } else if (result.offsetMillis.has_value()) {
+    auto seconds = result.timestamp.getSeconds();
+    // use int128_t to avoid overflow.
+    int128_t nanos = result.timestamp.getNanos();
+
+    seconds -= result.offsetMillis.value() / util::kMillisPerSecond;
+    nanos -= (result.offsetMillis.value() % util::kMillisPerSecond) *
+        util::kNanosPerMicro * util::kMicrosPerMsec;
+
+    if (nanos < 0) {
+      seconds -= 1;
+      nanos += Timestamp::kNanosInSecond;
+    } else if (nanos > Timestamp::kMaxNanos) {
+      seconds += 1;
+      nanos -= Timestamp::kNanosInSecond;
+    }
+
+    result.timestamp = Timestamp(seconds, nanos);
+  } else {
+    const auto sessionTzName = config_.sessionTimezone();
+    if (!sessionTzName.empty()) {
+      result.timestamp.toGMT(*tz::locateZone(sessionTzName));
+    }
   }
-  return result;
+
+  return result.timestamp;
 }
 
 Expected<Timestamp> SparkCastHooks::castIntToTimestamp(int64_t seconds) const {
