@@ -381,7 +381,7 @@ struct TypeFactory;
   const typename TypeTraits<TypeKind::KIND>::ImplType& as##NAME() const { \
     return this->as<TypeKind::KIND>();                                    \
   }                                                                       \
-  bool is##NAME() const {                                                 \
+  virtual bool is##NAME() const {                                         \
     return this->kind() == TypeKind::KIND;                                \
   }
 
@@ -827,6 +827,14 @@ class DecimalType : public ScalarType<KIND> {
   static_assert(KIND == TypeKind::BIGINT || KIND == TypeKind::HUGEINT);
   static constexpr uint8_t kMaxPrecision = KIND == TypeKind::BIGINT ? 18 : 38;
   static constexpr uint8_t kMinPrecision = KIND == TypeKind::BIGINT ? 1 : 19;
+
+  bool isBigint() const override {
+    return false;
+  }
+
+  bool isHugeint() const override {
+    return false;
+  }
 
   inline bool equivalent(const Type& other) const override {
     if (!Type::hasSameTypeId(other)) {
@@ -1423,6 +1431,10 @@ class IntervalDayTimeType final : public BigintType {
     return this == &other;
   }
 
+  bool isBigint() const override {
+    return false;
+  }
+
   std::string toString() const override {
     return name();
   }
@@ -1479,6 +1491,10 @@ class IntervalYearMonthType final : public IntegerType {
     return name();
   }
 
+  bool isInteger() const override {
+    return false;
+  }
+
   /// Returns the interval 'value' (months) formatted as YEARS MONTHS.
   /// For example, 14 months (INTERVAL '1-2' YEAR TO MONTH) would be
   /// represented as 1-2; -14 months would be represents as -1-2.
@@ -1522,6 +1538,10 @@ class DateType final : public IntegerType {
 
   bool equivalent(const Type& other) const override {
     return this == &other;
+  }
+
+  bool isInteger() const override {
+    return false;
   }
 
   std::string toString() const override {
