@@ -377,12 +377,15 @@ constexpr bool is_nested_kind(TypeKind kind) {
 template <TypeKind KIND>
 struct TypeFactory;
 
-#define VELOX_FLUENT_CAST(NAME, KIND)                                     \
+#define VELOX_TYPE_AS(NAME, KIND)                                         \
   const typename TypeTraits<TypeKind::KIND>::ImplType& as##NAME() const { \
     return this->as<TypeKind::KIND>();                                    \
-  }                                                                       \
-  virtual bool is##NAME() const {                                         \
-    return this->kind() == TypeKind::KIND;                                \
+  }
+
+#define VELOX_FLUENT_CAST(NAME, KIND)      \
+  VELOX_TYPE_AS(NAME, KIND)                \
+  bool is##NAME() const {                  \
+    return this->kind() == TypeKind::KIND; \
   }
 
 class Type;
@@ -627,9 +630,14 @@ class Type : public Tree<const TypePtr>, public velox::ISerializable {
   VELOX_FLUENT_CAST(Boolean, BOOLEAN)
   VELOX_FLUENT_CAST(Tinyint, TINYINT)
   VELOX_FLUENT_CAST(Smallint, SMALLINT)
-  VELOX_FLUENT_CAST(Integer, INTEGER)
-  VELOX_FLUENT_CAST(Bigint, BIGINT)
-  VELOX_FLUENT_CAST(Hugeint, HUGEINT)
+
+  VELOX_TYPE_AS(Integer, INTEGER)
+  VELOX_TYPE_AS(Bigint, BIGINT)
+  VELOX_TYPE_AS(Hugeint, HUGEINT)
+  bool isInteger() const;
+  bool isBigint() const;
+  bool isHugeint() const;
+
   VELOX_FLUENT_CAST(Real, REAL)
   VELOX_FLUENT_CAST(Double, DOUBLE)
   VELOX_FLUENT_CAST(Varchar, VARCHAR)
@@ -682,6 +690,7 @@ class Type : public Tree<const TypePtr>, public velox::ISerializable {
   const bool providesCustomComparison_;
 };
 
+#undef VELOX_TYPE_AS
 #undef VELOX_FLUENT_CAST
 
 template <TypeKind KIND, typename = void>
@@ -817,6 +826,18 @@ class ScalarType : public CanProvideCustomComparisonType<KIND> {
   }
 };
 
+FOLLY_ALWAYS_INLINE bool Type::isInteger() const {
+  return typeid(*this) == typeid(ScalarType<TypeKind::INTEGER>);
+}
+
+FOLLY_ALWAYS_INLINE bool Type::isBigint() const {
+  return typeid(*this) == typeid(ScalarType<TypeKind::BIGINT>);
+}
+
+FOLLY_ALWAYS_INLINE bool Type::isHugeint() const {
+  return typeid(*this) == typeid(ScalarType<TypeKind::HUGEINT>);
+}
+
 /// This class represents the fixed-point numbers.
 /// The parameter "precision" represents the number of digits the
 /// Decimal Type can support and "scale" represents the number of digits to
@@ -827,14 +848,6 @@ class DecimalType : public ScalarType<KIND> {
   static_assert(KIND == TypeKind::BIGINT || KIND == TypeKind::HUGEINT);
   static constexpr uint8_t kMaxPrecision = KIND == TypeKind::BIGINT ? 18 : 38;
   static constexpr uint8_t kMinPrecision = KIND == TypeKind::BIGINT ? 1 : 19;
-
-  bool isBigint() const override {
-    return false;
-  }
-
-  bool isHugeint() const override {
-    return false;
-  }
 
   inline bool equivalent(const Type& other) const override {
     if (!Type::hasSameTypeId(other)) {
@@ -1431,10 +1444,6 @@ class IntervalDayTimeType final : public BigintType {
     return this == &other;
   }
 
-  bool isBigint() const override {
-    return false;
-  }
-
   std::string toString() const override {
     return name();
   }
@@ -1491,10 +1500,6 @@ class IntervalYearMonthType final : public IntegerType {
     return name();
   }
 
-  bool isInteger() const override {
-    return false;
-  }
-
   /// Returns the interval 'value' (months) formatted as YEARS MONTHS.
   /// For example, 14 months (INTERVAL '1-2' YEAR TO MONTH) would be
   /// represented as 1-2; -14 months would be represents as -1-2.
@@ -1538,10 +1543,6 @@ class DateType final : public IntegerType {
 
   bool equivalent(const Type& other) const override {
     return this == &other;
-  }
-
-  bool isInteger() const override {
-    return false;
   }
 
   std::string toString() const override {
