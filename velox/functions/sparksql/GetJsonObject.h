@@ -36,6 +36,7 @@ struct GetJsonObjectFunction {
       const arg_type<Varchar>* jsonPath) {
     if (jsonPath != nullptr && checkJsonPath(*jsonPath)) {
       jsonPath_ = removeSingleQuotes(*jsonPath);
+      splittedJsonPath_ = splitJsonPath(jsonPath_.value());
     }
   }
 
@@ -57,10 +58,25 @@ struct GetJsonObjectFunction {
     if (simdjsonParse(paddedJson).get(jsonDoc)) {
       return false;
     }
-    const auto formattedJsonPath = jsonPath_.has_value()
+    const auto formattedJsonPath = isConstantJsonPath()
         ? jsonPath_.value()
         : removeSingleQuotes(jsonPath);
-
+    const auto splittedJsonPath = isConstantJsonPath()? splittedJsonPath_ : splitJsonPath(formattedJsonPath);
+    
+    if (!splittedJsonPath.empty()) {
+      int i = 0;
+      while (i < splitJsonPath.size()) {
+        auto& path = splittedJsonPath[i];
+        auto rawPartialResult = jsonDoc.at_path(path);
+        if (rawPartialResult.error()) {
+          return false;
+        }
+        if (rawPartialResult.type() != simdjson::ondemand::json_type::array) {
+          return false;
+        }
+        ++i;
+      }
+    }
     auto wildcardPos = formattedJsonPath.find("*", 0);
     if (wildcardPos != std::string::npos) {
       std::string_view partialPath(formattedJsonPath.data(), wildcardPos - 1);
@@ -268,6 +284,32 @@ struct GetJsonObjectFunction {
     }
   }
 
+  std::vector<std::string_view> splitJsonPath(const std::string_view& jsonPath) {
+    std::vector<std::string_view> result;
+    // No wildcard in jsonPath.
+    if (jsonPath.find("*", 0) == std::string::npos) {
+        return result;
+    }
+    // size_t start = 0;
+    std::string_view path = jsonPath;
+    while (true) {
+      size_t wildcardPos = path.find("*", 0);
+      if (wildcardPos == std::string::npos) {
+        result.push_back(path);
+        return result;
+      }
+      std::string_view partialPath = path.substr(0, wildcardPos - 1);
+      if (!partialPath.empty()) {
+        result.push_back(partialPath);
+      }
+      result.push_back("*");
+      path = path.substr(wildcardPos + 2, path.size() - wildcardPos - 2);
+      if (path.empty()) {
+        return result;
+      }
+    }
+  }
+
   // Checks whether the obtained result is followed by valid char. Because
   // On-Demand API we are using ignores json format validation for characters
   // following the current parsing position. As json doc is padded with NULL
@@ -286,8 +328,14 @@ struct GetJsonObjectFunction {
     return false;
   }
 
+  bool isConstantJsonPath() {
+    return jsonPath_.has_value();
+  }
+
   // Used for constant json path.
   std::optional<std::string> jsonPath_;
+  // Contains value only if jsonPath is constant and jsonPath contains wildcard.
+  std::optional<std::vector<std::string_view>> splittedJsonPath_;
 };
 
 } // namespace facebook::velox::functions::sparksql
