@@ -53,10 +53,11 @@ void Timestamp::toGMT(const tz::TimeZone& zone) {
   std::chrono::seconds sysSeconds;
 
   try {
-    sysSeconds = zone.to_sys(std::chrono::seconds(seconds_));
+    // If the time is ambiguous, pick the earlier possibility, consistent
+    // with Presto and Spark.
+    sysSeconds = zone.to_sys(
+        std::chrono::seconds(seconds_), tz::TimeZone::TChoose::kEarliest);
   } catch (const tzdb::ambiguous_local_time&) {
-    // If the time is ambiguous, pick the earlier possibility to be consistent
-    // with Presto.
     sysSeconds = zone.to_sys(
         std::chrono::seconds(seconds_), tz::TimeZone::TChoose::kEarliest);
   } catch (const tzdb::nonexistent_local_time& error) {
