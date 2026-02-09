@@ -826,18 +826,6 @@ class ScalarType : public CanProvideCustomComparisonType<KIND> {
   }
 };
 
-FOLLY_ALWAYS_INLINE bool Type::isInteger() const {
-  return typeid(*this) == typeid(ScalarType<TypeKind::INTEGER>);
-}
-
-FOLLY_ALWAYS_INLINE bool Type::isBigint() const {
-  return typeid(*this) == typeid(ScalarType<TypeKind::BIGINT>);
-}
-
-FOLLY_ALWAYS_INLINE bool Type::isHugeint() const {
-  return typeid(*this) == typeid(ScalarType<TypeKind::HUGEINT>);
-}
-
 /// This class represents the fixed-point numbers.
 /// The parameter "precision" represents the number of digits the
 /// Decimal Type can support and "scale" represents the number of digits to
@@ -1419,6 +1407,18 @@ using DoubleType = ScalarType<TypeKind::DOUBLE>;
 using TimestampType = ScalarType<TypeKind::TIMESTAMP>;
 using VarcharType = ScalarType<TypeKind::VARCHAR>;
 using VarbinaryType = ScalarType<TypeKind::VARBINARY>;
+
+FOLLY_ALWAYS_INLINE bool Type::isInteger() const {
+  return this == IntegerType::create().get();
+}
+
+FOLLY_ALWAYS_INLINE bool Type::isBigint() const {
+  return this == BigintType::create().get();
+}
+
+FOLLY_ALWAYS_INLINE bool Type::isHugeint() const {
+  return this == HugeintType::create().get();
+}
 
 constexpr long kMillisInSecond = 1000;
 constexpr long kMillisInMinute = 60 * kMillisInSecond;
